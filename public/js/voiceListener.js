@@ -186,8 +186,14 @@ export class VoiceListener {
       return true;
     }
 
-    // 2. Pain / Distress (<1ms Safety Pause)
+    // 2. Pain, Injury / Distress (<1ms Safety Pause)
     if (
+      clean.includes('hurt myself') ||
+      clean.includes('injured') ||
+      clean.includes('pulled a muscle') ||
+      clean.includes('sprained') ||
+      clean.includes('not feeling good') ||
+      clean.includes('feel sick') ||
       clean.includes('hurt') ||
       clean.includes('hurts') ||
       clean.includes('hurting') ||
@@ -203,7 +209,70 @@ export class VoiceListener {
     ) {
       this.lastProcessedText = clean;
       setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('PAUSE', text, 'PAIN');
+      const isInjured = clean.includes('hurt myself') || clean.includes('injured') || clean.includes('pulled a muscle');
+      this.onCommand('PAUSE', text, isInjured ? 'INJURY' : 'PAIN');
+      return true;
+    }
+
+    // 2b. Dynamic Workout Routine Switching on the fly ("I want to do triceps now", "switch to legs")
+    if (
+      clean.includes('tricep') || clean.includes('triceps') || clean.includes('diamond push')
+    ) {
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('SWITCH_ROUTINE', text, 'triceps');
+      return true;
+    }
+
+    if (
+      clean.includes('legs') || clean.includes('leg day') || clean.includes('quads') || clean.includes('squats')
+    ) {
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('SWITCH_ROUTINE', text, 'legs');
+      return true;
+    }
+
+    if (
+      clean.includes('chest') || clean.includes('pecs') || clean.includes('pushups') || clean.includes('push ups')
+    ) {
+      if (clean.includes('do chest') || clean.includes('want chest') || clean.includes('switch to chest') || clean.includes('chest blast')) {
+        this.lastProcessedText = clean;
+        setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+        this.onCommand('SWITCH_ROUTINE', text, 'chest');
+        return true;
+      }
+    }
+
+    if (
+      clean.includes('core') || clean.includes('abs') || clean.includes('abdominals')
+    ) {
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('SWITCH_ROUTINE', text, 'core');
+      return true;
+    }
+
+    if (
+      clean.includes('shoulders') || clean.includes('shoulder workout') || clean.includes('delts')
+    ) {
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('SWITCH_ROUTINE', text, 'shoulders');
+      return true;
+    }
+
+    // 2c. Spoken Form Coaching Masterclass ("Teach me what to do and how to do")
+    if (
+      clean.includes('teach me') ||
+      clean.includes('how to do') ||
+      clean.includes('how do i do') ||
+      clean.includes('explain form') ||
+      clean.includes('what to do')
+    ) {
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('TEACH_EXERCISE', text);
       return true;
     }
 
@@ -250,13 +319,16 @@ export class VoiceListener {
       return true;
     }
 
-    // 5. Recovery / Resume: "okay now", "ready to go", "resume", "continue", "start again", "all good"
+    // 5. Recovery / Resume: "okay now", "ready to go", "resume", "continue", "start again", "all good", "feeling good"
     if (
       clean.includes('resume') ||
       clean.includes('continue') ||
       clean.includes('okay now') ||
       clean.includes('fine now') ||
       clean.includes('good now') ||
+      clean.includes('feeling good') ||
+      clean.includes('feel good') ||
+      clean.includes('feeling great') ||
       clean.includes('recovered') ||
       clean.includes('ready to go') ||
       clean.includes('ready to roll') ||

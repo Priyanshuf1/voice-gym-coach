@@ -1,32 +1,63 @@
 /**
  * stateMachine.js
  * Robust Workout Finite State Machine (FSM)
- * Ensures zero stale timer leaks, clean state transitions, and immediate recovery from interrupts.
+ * Supports dynamic on-the-fly workout switching for any muscle group:
+ * Triceps, Legs, Chest, Core, Shoulders, Full Body.
  */
 
 export const WORKOUT_ROUTINES = {
   full_body: {
     name: 'Full Body Burn',
+    muscle: 'Full Body',
     exercises: [
       { id: 'pushups', name: 'Push-Ups', sets: 3, reps: 8, restSeconds: 30 },
       { id: 'squats', name: 'Bodyweight Squats', sets: 3, reps: 10, restSeconds: 30 },
       { id: 'climbers', name: 'Mountain Climbers', sets: 3, reps: 12, restSeconds: 25 }
     ]
   },
-  upper_body: {
-    name: 'Upper Body Power',
+  triceps: {
+    name: 'Triceps Power Blast',
+    muscle: 'Triceps',
     exercises: [
       { id: 'diamond_pushups', name: 'Diamond Push-ups', sets: 3, reps: 8, restSeconds: 30 },
-      { id: 'pike_pushups', name: 'Pike Push-ups', sets: 3, reps: 8, restSeconds: 35 },
-      { id: 'dips', name: 'Bench Dips', sets: 3, reps: 10, restSeconds: 30 }
+      { id: 'dips', name: 'Bench Dips', sets: 3, reps: 10, restSeconds: 30 },
+      { id: 'tricep_extensions', name: 'Plank Tricep Extensions', sets: 3, reps: 8, restSeconds: 25 }
     ]
   },
-  core_mobility: {
-    name: 'Core & Mobility',
+  legs: {
+    name: 'Legs & Quads Power',
+    muscle: 'Legs',
+    exercises: [
+      { id: 'squats', name: 'Bodyweight Squats', sets: 3, reps: 12, restSeconds: 30 },
+      { id: 'lunges', name: 'Reverse Lunges', sets: 3, reps: 10, restSeconds: 30 },
+      { id: 'jump_squats', name: 'Explosive Jump Squats', sets: 3, reps: 8, restSeconds: 35 }
+    ]
+  },
+  chest: {
+    name: 'Chest & Pecs Hypertrophy',
+    muscle: 'Chest',
+    exercises: [
+      { id: 'pushups', name: 'Standard Push-ups', sets: 3, reps: 10, restSeconds: 30 },
+      { id: 'wide_pushups', name: 'Wide-Grip Push-ups', sets: 3, reps: 8, restSeconds: 30 },
+      { id: 'incline_pushups', name: 'Tempo Push-ups', sets: 3, reps: 8, restSeconds: 30 }
+    ]
+  },
+  core: {
+    name: 'Core & Abs Shield',
+    muscle: 'Core',
     exercises: [
       { id: 'plank', name: 'Plank Hold', sets: 3, reps: 20, restSeconds: 25 },
-      { id: 'birddog', name: 'Bird-Dog Extensions', sets: 3, reps: 10, restSeconds: 20 },
-      { id: 'crunches', name: 'Bicycle Crunches', sets: 3, reps: 12, restSeconds: 25 }
+      { id: 'climbers', name: 'Mountain Climbers', sets: 3, reps: 16, restSeconds: 25 },
+      { id: 'crunches', name: 'Bicycle Crunches', sets: 3, reps: 14, restSeconds: 25 }
+    ]
+  },
+  shoulders: {
+    name: 'Shoulders & Delts',
+    muscle: 'Shoulders',
+    exercises: [
+      { id: 'pike_pushups', name: 'Pike Push-ups', sets: 3, reps: 8, restSeconds: 35 },
+      { id: 'plank_taps', name: 'Plank Shoulder Taps', sets: 3, reps: 12, restSeconds: 25 },
+      { id: 'bear_crawl', name: 'Bear Crawl Hold', sets: 3, reps: 10, restSeconds: 30 }
     ]
   }
 };
@@ -84,6 +115,20 @@ export class WorkoutStateMachine {
     }
   }
 
+  switchWorkoutTo(muscleKey) {
+    const clean = (muscleKey || '').toLowerCase();
+    let target = 'full_body';
+    if (clean.includes('tricep') || clean.includes('arm')) target = 'triceps';
+    else if (clean.includes('leg') || clean.includes('quad') || clean.includes('squat')) target = 'legs';
+    else if (clean.includes('chest') || clean.includes('pec')) target = 'chest';
+    else if (clean.includes('core') || clean.includes('ab') || clean.includes('plank')) target = 'core';
+    else if (clean.includes('shoulder') || clean.includes('delt')) target = 'shoulders';
+    else if (WORKOUT_ROUTINES[clean]) target = clean;
+
+    this.setRoutine(target);
+    return WORKOUT_ROUTINES[target];
+  }
+
   setPacing(pacingMs) {
     this.repPacingMs = Math.max(1200, Math.min(4000, pacingMs));
     this.onLog(`⚡ Rep pacing set to ${(this.repPacingMs / 1000).toFixed(1)}s per rep`, 'info');
@@ -97,6 +142,8 @@ export class WorkoutStateMachine {
     const ex = this.currentExercise || {};
     return {
       state: this.state,
+      routineKey: this.routineKey,
+      routineName: (WORKOUT_ROUTINES[this.routineKey] && WORKOUT_ROUTINES[this.routineKey].name) || 'Workout',
       exercise: ex,
       set: this.currentSet,
       totalSets: ex.sets || 3,
@@ -111,10 +158,6 @@ export class WorkoutStateMachine {
     this.onStateChange(this.state, this.getContext());
   }
 
-  /**
-   * Completely clear any running intervals or pending timeouts.
-   * This guarantees no lingering timers count down in the background.
-   */
   clearAllTimers() {
     if (this.restInterval) {
       clearInterval(this.restInterval);
@@ -127,9 +170,6 @@ export class WorkoutStateMachine {
     this.isRepLoopActive = false;
   }
 
-  /**
-   * Start or restart the workout
-   */
   async startWorkout() {
     this.clearAllTimers();
     this.exerciseIndex = 0;
@@ -141,216 +181,150 @@ export class WorkoutStateMachine {
     this.onLog(`🚀 Workout started: ${this.currentExercise.name}, Set 1 of ${this.currentExercise.sets}`, 'info');
     await this.audio.speak(`Get ready for ${this.currentExercise.name}. Set 1 starting in 3, 2, 1, go!`, true);
 
-    if (this.state === STATES.COUNTDOWN) {
-      this.startRepCycle();
-    }
+    this.startRepCycle();
   }
 
-  /**
-   * Run the rep pacing loop
-   */
-  async startRepCycle() {
+  startRepCycle() {
     this.clearAllTimers();
     this.state = STATES.EXERCISE_REPS;
     this.currentRep = 0;
     this.isRepLoopActive = true;
     this.notifyState();
 
-    this.runNextRep();
+    this.loopNextRep();
   }
 
-  async runNextRep() {
+  async loopNextRep() {
     if (!this.isRepLoopActive || this.state !== STATES.EXERCISE_REPS) return;
 
     this.currentRep++;
     this.onRep(this.currentRep, this.currentExercise.reps);
+    this.notifyState();
 
-    // Dynamic encouraging cues
-    let cue = `${this.currentRep}`;
-    if (this.currentRep === 1) cue = "1, good form!";
-    else if (this.currentRep === Math.floor(this.currentExercise.reps / 2)) cue = `${this.currentRep}, halfway there!`;
-    else if (this.currentRep === this.currentExercise.reps - 1) cue = `${this.currentRep}, one more!`;
-    else if (this.currentRep === this.currentExercise.reps) cue = `${this.currentRep}, and down! Set finished.`;
+    let spokenText = `${this.currentRep}`;
+    if (this.currentRep === Math.floor(this.currentExercise.reps / 2)) {
+      spokenText = `${this.currentRep}, halfway there!`;
+    } else if (this.currentRep === this.currentExercise.reps) {
+      spokenText = `${this.currentRep}, that's the set! Excellent work.`;
+    }
 
-    // Play crisp rep chime
-    if (this.soundFx) this.soundFx.playRepDing();
-
-    await this.audio.speak(cue);
-
-    if (!this.isRepLoopActive || this.state !== STATES.EXERCISE_REPS) return;
+    await this.audio.speak(spokenText);
 
     if (this.currentRep >= this.currentExercise.reps) {
-      this.finishCurrentSet();
+      this.completeSet();
     } else {
-      // Rep pacing delay
       this.repTimeout = setTimeout(() => {
-        this.runNextRep();
+        this.loopNextRep();
       }, this.repPacingMs);
     }
   }
 
-  /**
-   * Transition from rep completion to rest timer
-   */
-  async finishCurrentSet() {
+  completeSet() {
     this.clearAllTimers();
+    this.soundFx.playSetComplete();
 
     if (this.currentSet < this.currentExercise.sets) {
-      // Start rest period before next set
-      this.startRestTimer(this.currentExercise.restSeconds);
+      this.startRestTimer(this.currentExercise.restSeconds || 30);
     } else {
-      // Exercise finished, check if there's a next exercise
       if (this.exerciseIndex < this.currentPlan.length - 1) {
         this.exerciseIndex++;
         this.currentSet = 1;
-        this.onLog(`✅ Completed all sets of previous exercise. Moving to ${this.currentExercise.name}`, 'success');
-        this.startRestTimer(40, `Great work! Exercise finished. Next up is ${this.currentExercise.name}. Rest for 40 seconds.`);
+        this.currentRep = 0;
+        this.startRestTimer(40);
+        this.audio.speak(`Exercise finished! Up next is ${this.currentExercise.name}. Rest for 40 seconds.`);
       } else {
         this.state = STATES.COMPLETED;
         this.notifyState();
-        this.onLog(`🏆 WORKOUT COMPLETED! Outstanding effort!`, 'success');
-        await this.audio.speak("Workout complete! Outstanding effort today! You crushed it.", true);
+        this.soundFx.playWorkoutVictory();
+        this.onLog('🏆 Workout complete! Incredible effort today.', 'success');
+        this.audio.speak("Workout complete! Outstanding effort today. Take a cooldown and rehydrate!");
       }
     }
   }
 
-  /**
-   * Start a countdown rest period
-   */
-  async startRestTimer(seconds = 30, customAnnouncement = null) {
+  startRestTimer(seconds) {
     this.clearAllTimers();
     this.state = STATES.REST_TIMER;
     this.totalRestTime = seconds;
     this.restTimeRemaining = seconds;
     this.notifyState();
 
-    if (this.soundFx) this.soundFx.playRestGong();
+    this.audio.speak(`Rest for ${seconds} seconds.`);
 
-    const speechText = customAnnouncement || `Rest for ${seconds} seconds. Take deep breaths.`;
-    this.onLog(`⏱️ Rest period started (${seconds}s)`, 'info');
+    this.restInterval = setInterval(() => {
+      this.restTimeRemaining--;
+      this.onTick(this.getContext());
 
-    // Announce rest out loud
-    await this.audio.speak(speechText);
+      if (this.restTimeRemaining === 10) {
+        this.audio.speak("Ten seconds left. Shake out your muscles and get into position.");
+      } else if (this.restTimeRemaining === 3) {
+        this.audio.speak("Three");
+      } else if (this.restTimeRemaining === 2) {
+        this.audio.speak("Two");
+      } else if (this.restTimeRemaining === 1) {
+        this.audio.speak("One");
+      } else if (this.restTimeRemaining <= 0) {
+        this.clearAllTimers();
+        this.currentSet++;
+        this.startRepCycle();
+      }
+    }, 1000);
+  }
 
-    // If still in rest mode (not interrupted while coach was announcing)
-    if (this.state === STATES.REST_TIMER) {
-      this.restInterval = setInterval(() => {
-        if (this.state !== STATES.REST_TIMER) {
-          clearInterval(this.restInterval);
-          return;
-        }
+  skipRest() {
+    if (this.state !== STATES.REST_TIMER) return;
+    this.clearAllTimers();
+    this.onLog('⏭️ Rest timer skipped via voice command.', 'info');
+    this.audio.speak("Skipping rest! Next set starts now.", true);
+    this.currentSet++;
+    this.startRepCycle();
+  }
 
-        this.restTimeRemaining--;
-        this.onTick(this.restTimeRemaining, this.totalRestTime);
+  addRestSeconds(seconds = 10) {
+    if (this.state !== STATES.REST_TIMER) return;
+    this.restTimeRemaining += seconds;
+    this.totalRestTime += seconds;
+    this.onLog(`⏱️ Added ${seconds}s to rest timer (${this.restTimeRemaining}s left)`, 'info');
+    this.audio.speak(`Added ${seconds} seconds to rest.`);
+    this.notifyState();
+  }
 
-        // Sound tick in last 5 seconds
-        if (this.restTimeRemaining <= 5 && this.restTimeRemaining > 0 && this.soundFx) {
-          this.soundFx.playTick();
-        }
+  pause() {
+    if (this.state === STATES.PAUSED || this.state === STATES.IDLE || this.state === STATES.COMPLETED) return;
+    this.clearAllTimers();
+    this.state = STATES.PAUSED;
+    this.notifyState();
+    this.onLog('⏸️ Workout paused. Holding current progress.', 'info');
+  }
 
-        // Announce remaining time cues
-        if (this.restTimeRemaining === 10) {
-          this.audio.speak("10 seconds left, get ready.");
-        } else if (this.restTimeRemaining <= 0) {
-          this.clearAllTimers();
-          this.currentSet++;
-          this.onLog(`🔔 Rest timer completed naturally. Starting Set ${this.currentSet}.`, 'info');
-          this.audio.speak(`Time's up! Set ${this.currentSet}, 3, 2, 1, go!`, true).then(() => {
-            if (this.state === STATES.REST_TIMER || this.state === STATES.EXERCISE_REPS) {
-              this.startRepCycle();
-            }
-          });
-        }
+  resume() {
+    if (this.state !== STATES.PAUSED) return;
+    this.onLog('▶️ Resuming workout from where you left off.', 'info');
+
+    if (this.restTimeRemaining > 0) {
+      this.startRestTimer(this.restTimeRemaining);
+    } else {
+      this.state = STATES.EXERCISE_REPS;
+      this.isRepLoopActive = true;
+      this.notifyState();
+      this.audio.speak("Resuming set! Let's get right back into it.");
+      this.repTimeout = setTimeout(() => {
+        this.loopNextRep();
       }, 1000);
     }
   }
 
-  /**
-   * ⚡ SKIP REST (THE CORE BARGE-IN ACCEPTANCE TEST REQUIREMENT)
-   * Must:
-   * 1. Clear active rest interval immediately
-   * 2. Advance set counter correctly
-   * 3. Switch state directly to EXERCISE_REPS
-   * 4. Announce and begin next set without old countdown in background
-   */
-  skipRest() {
-    this.onLog(`⚡ [STATE-MACHINE] skipRest() called. Destroying background rest interval.`, 'interrupt');
-
-    if (this.soundFx) this.soundFx.playBargeInGlitch();
-
-    // 1. Instantly destroy background timer
-    this.clearAllTimers();
-
-    // 2. Advance to next set
-    this.currentSet++;
-    this.state = STATES.EXERCISE_REPS;
-    this.currentRep = 0;
-    this.notifyState();
-
-    this.onLog(`🔄 State updated: REST_TIMER -> EXERCISE_REPS. Set is now ${this.currentSet} of ${this.currentExercise.sets}.`, 'success');
-
-    // 3. Announce new set immediately
-    this.audio.speak(`Skipping rest! Starting Set ${this.currentSet} now: 1...`, true).then(() => {
-      this.isRepLoopActive = true;
-      this.currentRep = 1;
-      this.onRep(this.currentRep, this.currentExercise.reps);
-      this.repTimeout = setTimeout(() => {
-        this.runNextRep();
-      }, 2200);
-    });
-  }
-
-  /**
-   * Add seconds to the rest timer
-   */
-  addRestSeconds(seconds = 10) {
-    if (this.state === STATES.REST_TIMER) {
-      this.restTimeRemaining += seconds;
-      this.totalRestTime += seconds;
-      this.onTick(this.restTimeRemaining, this.totalRestTime);
-      this.onLog(`⏱️ Added ${seconds}s to rest timer. New remaining: ${this.restTimeRemaining}s`, 'info');
-      this.audio.speak(`Added ${seconds} seconds. Rest up.`, true);
-    }
-  }
-
-  /**
-   * Move to next exercise
-   */
   nextExercise() {
     this.clearAllTimers();
-    if (this.exerciseIndex < WORKOUT_PLAN.length - 1) {
+    if (this.exerciseIndex < this.currentPlan.length - 1) {
       this.exerciseIndex++;
       this.currentSet = 1;
       this.currentRep = 0;
-      this.onLog(`⏭️ Skipping to next exercise: ${this.currentExercise.name}`, 'info');
-      this.audio.speak(`Switching to ${this.currentExercise.name}. Set 1 starting now!`, true).then(() => {
-        this.startRepCycle();
-      });
+      this.onLog(`⏭️ Skipped to next exercise: ${this.currentExercise.name}`, 'info');
+      this.audio.speak(`Moving to ${this.currentExercise.name}! Get ready.`, true);
+      this.startRepCycle();
     } else {
-      this.audio.speak(`This is already the last exercise. Let's finish strong!`, true);
-    }
-  }
-
-  /**
-   * Pause workout
-   */
-  pause() {
-    this.clearAllTimers();
-    this.state = STATES.PAUSED;
-    this.notifyState();
-    this.onLog(`⏸️ Workout paused.`, 'info');
-    this.audio.speak("Workout paused. Say 'resume' whenever you are ready.", true);
-  }
-
-  /**
-   * Resume workout
-   */
-  resume() {
-    if (this.state === STATES.PAUSED) {
-      this.onLog(`▶️ Workout resumed.`, 'info');
-      this.audio.speak("Resuming workout!", true).then(() => {
-        this.startRepCycle();
-      });
+      this.completeSet();
     }
   }
 }

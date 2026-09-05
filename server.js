@@ -138,23 +138,26 @@ app.post('/api/intent-ai', async (req, res) => {
     return res.status(400).json({ error: 'Utterance is required' });
   }
 
-  // 1. Athlete Distress & Pain Detection (<1ms immediate safety pause)
+  // 1. Athlete Distress, Pain & Injury Detection (<1ms immediate safety pause)
   if (
-    lower.includes('not feeling good') || lower.includes('feeling bad') || lower.includes('feel bad') ||
-    lower.includes('feel sick') || lower.includes('elbow hurt') || lower.includes('elbow is hurting') ||
-    lower.includes('shoulder hurt') || lower.includes('knee hurt') || lower.includes('wrist hurt') ||
-    lower.includes('dizzy') || lower.includes('nauseous') || lower.includes('lightheaded') ||
-    lower.includes('pain') || lower.includes('cramping') || lower.includes('hurts') ||
-    lower.includes('clicking') || lower.includes('cracking')
+    lower.includes('hurt myself') || lower.includes('injured') || lower.includes('pulled a muscle') ||
+    lower.includes('sprained') || lower.includes('not feeling good') || lower.includes('feeling bad') ||
+    lower.includes('feel bad') || lower.includes('feel sick') || lower.includes('elbow hurt') ||
+    lower.includes('elbow is hurting') || lower.includes('shoulder hurt') || lower.includes('knee hurt') ||
+    lower.includes('wrist hurt') || lower.includes('dizzy') || lower.includes('nauseous') ||
+    lower.includes('lightheaded') || lower.includes('pain') || lower.includes('cramping') ||
+    lower.includes('hurts') || lower.includes('clicking') || lower.includes('cracking')
   ) {
-    let advice = "Workout paused. If you feel sharp joint discomfort, take a breather and do not force through pain.";
-    if (lower.includes('elbow')) {
+    let advice = "Workout paused immediately for safety. Step back, catch your breath, and do not push through sharp pain.";
+    if (lower.includes('hurt myself') || lower.includes('injured')) {
+      advice = "Workout paused immediately. Sit down, avoid bearing weight on the joint, and take slow, deep recovery breaths.";
+    } else if (lower.includes('elbow')) {
       advice = "Workout paused. Sharp elbow pain usually comes from flaring elbows out. Tuck them forty-five degrees to your ribs.";
     } else if (lower.includes('shoulder')) {
       advice = "Workout paused. Keep your shoulder blades pulled down and back to avoid joint impingement.";
     } else if (lower.includes('knee')) {
       advice = "Workout paused. Keep your knees tracking out over your pinky toes and load through your heels.";
-    } else if (lower.includes('dizzy') || lower.includes('lightheaded') || lower.includes('bad')) {
+    } else if (lower.includes('dizzy') || lower.includes('lightheaded') || lower.includes('bad') || lower.includes('sick')) {
       advice = "Workout paused immediately. Sit down, sip some water, and take deep diaphragmatic breaths.";
     }
     return res.json({
@@ -169,6 +172,7 @@ app.post('/api/intent-ai', async (req, res) => {
     lower.includes('okay now') || lower.includes('fine now') || lower.includes('good now') ||
     lower.includes('recovered') || lower.includes('ready to go') || lower.includes('ready now') ||
     lower.includes('all good') || lower.includes("i'm okay") || lower.includes("i am okay") ||
+    lower.includes('feeling good') || lower.includes('feel good') || lower.includes('feeling great') ||
     lower.includes('feeling better') || lower.includes('back at it')
   ) {
     const nextAction = (workoutContext.state === 'REST_TIMER') ? 'SKIP_REST' : (workoutContext.state === 'PAUSED' ? 'RESUME' : 'START');
@@ -179,7 +183,87 @@ app.post('/api/intent-ai', async (req, res) => {
     });
   }
 
-  // 3. START command (Immediate start / begin / start the gym / let's go)
+  // 3. Dynamic Workout Routine Switching on the Fly ("I want to do triceps now", "switch to legs")
+  const isSwitchRequest = lower.includes('switch') || lower.includes('want to do') || lower.includes('wanna do') ||
+    lower.includes('do ') || lower.includes('change to') || lower.includes('focus on') || lower.includes('train');
+
+  if (isSwitchRequest || lower.includes('tricep') || lower.includes('leg') || lower.includes('chest') || lower.includes('core') || lower.includes('shoulder')) {
+    if (lower.includes('tricep') || lower.includes('arms')) {
+      return res.json({
+        action: 'SWITCH_ROUTINE',
+        parameter: 'triceps',
+        spokenFeedback: "Switching to Triceps focus! Dropping previous workout. First up: Diamond Push-ups. Keep hands close and elbows tucked. Starting set one now!",
+        source: 'routine-dispatcher'
+      });
+    } else if (lower.includes('leg') || lower.includes('quad') || lower.includes('squat') || lower.includes('calve')) {
+      return res.json({
+        action: 'SWITCH_ROUTINE',
+        parameter: 'legs',
+        spokenFeedback: "Switching to Leg day! Dropping previous workout. First exercise: Bodyweight Squats. Keep your chest up, drive knees out. Starting set one now!",
+        source: 'routine-dispatcher'
+      });
+    } else if (lower.includes('chest') || lower.includes('pec')) {
+      return res.json({
+        action: 'SWITCH_ROUTINE',
+        parameter: 'chest',
+        spokenFeedback: "Switching to Chest blast! Dropping previous workout. First up: Standard Push-ups. Squeeze your pecs at the top. Starting set one now!",
+        source: 'routine-dispatcher'
+      });
+    } else if (lower.includes('core') || lower.includes('ab') || lower.includes('plank')) {
+      return res.json({
+        action: 'SWITCH_ROUTINE',
+        parameter: 'core',
+        spokenFeedback: "Switching to Core shield! Dropping previous workout. First up: Forearm Plank Hold. Brace like taking a punch. Starting set one now!",
+        source: 'routine-dispatcher'
+      });
+    } else if (lower.includes('shoulder') || lower.includes('delt')) {
+      return res.json({
+        action: 'SWITCH_ROUTINE',
+        parameter: 'shoulders',
+        spokenFeedback: "Switching to Shoulders! Dropping previous workout. First up: Pike Push-ups. Drive through your delts with power. Starting set one now!",
+        source: 'routine-dispatcher'
+      });
+    } else if (lower.includes('full body') || lower.includes('whole body')) {
+      return res.json({
+        action: 'SWITCH_ROUTINE',
+        parameter: 'full_body',
+        spokenFeedback: "Switching to Full Body burn! Dropping previous workout. First up: Push-ups. Let's do this, starting set one now!",
+        source: 'routine-dispatcher'
+      });
+    }
+  }
+
+  // 4. Form Coaching & Masterclass ("Teach me what to do and how to do")
+  if (
+    lower.includes('teach me') || lower.includes('how to do') || lower.includes('how do i do') ||
+    lower.includes('explain form') || lower.includes('break down') || lower.includes('form guide') ||
+    lower.includes('what to do')
+  ) {
+    const currentEx = (workoutContext.exerciseName || 'Push-ups').toLowerCase();
+    let coachingSpeech = "Set your foundation first: control the descent for two seconds, explode up with power, and breathe steadily.";
+
+    if (currentEx.includes('diamond')) {
+      coachingSpeech = "For diamond push-ups: join thumbs and index fingers under your chest. Tuck elbows tight to your ribcage to isolate triceps.";
+    } else if (currentEx.includes('push')) {
+      coachingSpeech = "For push-ups: place hands shoulder-width apart, screw palms into the floor, tuck elbows forty-five degrees, and touch chest down.";
+    } else if (currentEx.includes('squat')) {
+      coachingSpeech = "For squats: feet shoulder-width, break at hips and knees together, drive knees out over pinky toes, and press through your heels.";
+    } else if (currentEx.includes('dip')) {
+      coachingSpeech = "For dips: grip the edge, keep your back grazing the bench, lower to ninety degrees at elbows, and press straight through triceps.";
+    } else if (currentEx.includes('plank')) {
+      coachingSpeech = "For plank: elbows under shoulders, squeeze glutes hard, pull belly button to spine, and hold a straight line from neck to heels.";
+    } else if (currentEx.includes('pike')) {
+      coachingSpeech = "For pike push-ups: elevate hips high in an inverted V shape, lower crown of head between hands, and drive up through shoulders.";
+    }
+
+    return res.json({
+      action: 'TEACH_EXERCISE',
+      spokenFeedback: coachingSpeech,
+      source: 'biomechanics-masterclass'
+    });
+  }
+
+  // 5. START command (Immediate start / begin / start the gym / let's go)
   if (
     lower.includes('start the gym') || lower.includes('start workout') || lower.includes('start now') ||
     lower.includes('lets start') || lower.includes("let's start") || lower.includes('lets go') ||
@@ -193,13 +277,24 @@ app.post('/api/intent-ai', async (req, res) => {
     });
   }
 
-  // 4. PAUSE / Emergency Stop
+  // 6. PAUSE / Water Break / Emergency Stop
+  if (
+    lower.includes('water') || lower.includes('drink') || lower.includes('sip') || lower.includes('thirsty')
+  ) {
+    return res.json({
+      action: 'PAUSE',
+      parameter: 'WATER',
+      spokenFeedback: "Workout paused for water break. Rehydrate and catch your breath! Say start or resume when you're ready.",
+      source: 'phonetic-engine'
+    });
+  }
+
   if (
     lower.includes('paws') || lower.includes('pos') || lower.includes('hault') ||
     lower.includes('hold up') || lower.includes('hold on') || lower.includes('hol up') ||
     lower.includes('hol on') || lower.includes('gimme a sec') || lower.includes('gimme a min') ||
     lower.includes('wait up') || lower.includes('chill') || lower.includes('time out') ||
-    lower.includes('take a break') || lower.includes('need water') || lower.includes('let me breathe') ||
+    lower.includes('take a break') || lower.includes('let me breathe') ||
     lower.includes('dying') || lower.includes('stop') || lower.includes('pause')
   ) {
     return res.json({
@@ -209,7 +304,7 @@ app.post('/api/intent-ai', async (req, res) => {
     });
   }
 
-  // 5. SKIP REST
+  // 7. SKIP REST
   if (
     lower.includes('skipt') || lower.includes('skip rest') || lower.includes('skip it') ||
     lower.includes('next set') || lower.includes('next sit') || lower.includes('next round') ||
@@ -223,7 +318,7 @@ app.post('/api/intent-ai', async (req, res) => {
     });
   }
 
-  // 6. RESUME
+  // 8. RESUME
   if (
     lower.includes('resume') || lower.includes('continue') ||
     lower.includes('start again') || lower.includes('keep going')
@@ -235,7 +330,7 @@ app.post('/api/intent-ai', async (req, res) => {
     });
   }
 
-  // 7. Add time
+  // 9. Add time
   const addMatch = lower.match(/(?:add|need|gimme|give me|more)\s*(\d+|ten|fifteen|twenty|thirty|minute)?\s*(?:sec|second|more|time|rest)/);
   if (addMatch || lower.includes('more time') || lower.includes('more rest') || lower.includes('longer rest')) {
     let secs = 10;
@@ -252,11 +347,11 @@ app.post('/api/intent-ai', async (req, res) => {
     });
   }
 
-  // 8. Next Exercise
+  // 10. Next Exercise
   if (
-    lower.includes('switch') || lower.includes('next exercise') || lower.includes('skip exercise') ||
+    lower.includes('next exercise') || lower.includes('skip exercise') ||
     lower.includes('different exercise') || lower.includes('what is next') || lower.includes("what's next") ||
-    lower.includes('move on') || lower.includes('change workout') || lower.includes('swap')
+    lower.includes('move on') || lower.includes('swap exercise')
   ) {
     return res.json({
       action: 'NEXT_EXERCISE',
@@ -265,10 +360,10 @@ app.post('/api/intent-ai', async (req, res) => {
     });
   }
 
-  // 9. Form check queries
+  // 11. Form check queries
   if (
     lower.includes('form') || lower.includes('technique') || lower.includes('doing') ||
-    lower.includes('correct') || lower.includes('right') || lower.includes('how do i')
+    lower.includes('correct') || lower.includes('right')
   ) {
     const currentEx = workoutContext.exerciseName || 'Push-ups';
     let smartAdvice = "Keep your core braced tight and maintain full control through every rep.";
@@ -286,14 +381,16 @@ app.post('/api/intent-ai', async (req, res) => {
     });
   }
 
-  // 10. Gemini LLM Classification for open-ended questions
+  // 12. Gemini LLM Classification for open-ended questions
   try {
-    const promptSystem = `You are the voice gym coach AI brain. Exercise: ${workoutContext.exerciseName || 'Push-ups'}, Set ${workoutContext.set || 1}, State: ${workoutContext.state || 'ACTIVE'}.
-User said: "${raw}".
-Classify intent into ONE:
-- "START", "PAUSE", "SKIP_REST", "ADD_REST", "NEXT_EXERCISE", "RESUME", or "COACH_ADVICE".
-Respond with JSON only:
-{"action": "...", "spokenFeedback": "Short spoken advice under 20 words for the coach to say out loud"}`;
+    const promptSystem = `You are Coach Celeste, the voice gym coach AI brain.
+Current Exercise: ${workoutContext.exerciseName || 'Push-ups'}, Set ${workoutContext.set || 1}, State: ${workoutContext.state || 'ACTIVE'}.
+User utterance: "${raw}".
+Classify user's intent into ONE action:
+- "START", "PAUSE", "RESUME", "SKIP_REST", "ADD_REST", "SWITCH_ROUTINE", "TEACH_EXERCISE", or "COACH_ADVICE".
+If SWITCH_ROUTINE, include parameter: "triceps" | "legs" | "chest" | "core" | "shoulders" | "full_body".
+Respond strictly with valid JSON:
+{"action": "...", "parameter": "optional_parameter", "spokenFeedback": "Direct, punchy spoken coach response under 20 words"}`;
 
     const geminiRes = await fetch(`${GEMINI_API_URL}/chat/completions`, {
       method: 'POST',
@@ -305,7 +402,7 @@ Respond with JSON only:
         model: 'gemini-3.6-flash',
         messages: [{ role: 'system', content: promptSystem }],
         temperature: 0.2,
-        max_tokens: 70
+        max_tokens: 80
       }),
       signal: AbortSignal.timeout(8000)
     });
@@ -318,7 +415,7 @@ Respond with JSON only:
         const parsed = JSON.parse(jsonMatch[0]);
         return res.json({
           action: parsed.action || 'COACH_ADVICE',
-          parameter: parsed.parameter || 10,
+          parameter: parsed.parameter || null,
           spokenFeedback: parsed.spokenFeedback || 'Stay focused and keep pushing!',
           source: 'gemini-brain'
         });
