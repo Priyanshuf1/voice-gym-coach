@@ -1,7 +1,8 @@
 /**
  * app.js
- * Main entry point for Voice Gym Coach
- * Orchestrates Rime TTS, AudioController, StateMachine, VoiceListener, SoundFX, and Rabto UI.
+ * Main Orchestrator for Voice Gym Coach
+ * Coordinates Rime TTS, AudioController, StateMachine, VoiceListener, SoundFX,
+ * ExerciseVisualizer (Biomechanics Demo & Mascot), and CollaborationBackground.
  */
 
 import { RimeClient } from './rimeClient.js';
@@ -9,13 +10,14 @@ import { AudioController } from './audioController.js';
 import { WorkoutStateMachine, STATES, WORKOUT_ROUTINES } from './stateMachine.js';
 import { VoiceListener } from './voiceListener.js';
 import { SoundFX } from './soundFx.js';
+import { CollaborationBackground } from './collaborationBackground.js';
+import { ExerciseVisualizer } from './exerciseVisualizer.js';
+
+// 0. Background & Exercise Visualizer Initialization
+const collabBg = new CollaborationBackground('collab-bg-canvas');
+const exerciseVisualizer = new ExerciseVisualizer('exercise-visualizer-container');
 
 // DOM Elements
-const engineStatusBadge = document.getElementById('engine-status');
-const engineText = document.getElementById('engine-text');
-const geminiStatusBadge = document.getElementById('gemini-status');
-const geminiText = document.getElementById('gemini-text');
-
 const btnMute = document.getElementById('btn-mute');
 const volSlider = document.getElementById('vol-slider');
 
@@ -26,16 +28,12 @@ const workoutTargetEl = document.getElementById('workout-target');
 const hudNumberEl = document.getElementById('hud-number');
 const hudLabelEl = document.getElementById('hud-label');
 const circleProgressEl = document.getElementById('circle-progress');
-const coachSubtitleEl = document.getElementById('coach-subtitle');
 
 const btnToggleWorkout = document.getElementById('btn-toggle-workout');
 const btnLabel = document.getElementById('btn-label');
 const btnIcon = document.getElementById('btn-icon');
 const btnSkipRest = document.getElementById('btn-skip-rest');
 
-const micIndicator = document.getElementById('mic-indicator');
-const micVisualizer = document.getElementById('mic-visualizer');
-const heardTranscriptEl = document.getElementById('heard-transcript');
 const interruptCountBadge = document.getElementById('interrupt-count');
 const logConsole = document.getElementById('log-console');
 
@@ -53,8 +51,10 @@ const visualizerCanvas = document.getElementById('visualizer-canvas');
 
 // Circle Circumference for r=90
 const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 90; // ~565.48
-circleProgressEl.style.strokeDasharray = `${CIRCLE_CIRCUMFERENCE}`;
-circleProgressEl.style.strokeDashoffset = '0';
+if (circleProgressEl) {
+  circleProgressEl.style.strokeDasharray = `${CIRCLE_CIRCUMFERENCE}`;
+  circleProgressEl.style.strokeDashoffset = '0';
+}
 
 // Initialize SoundFX
 const soundFx = new SoundFX();
@@ -67,241 +67,205 @@ function logMessage(text, type = 'info') {
   const entry = document.createElement('div');
   entry.className = `log-entry ${type}`;
   entry.innerHTML = `<span style="opacity:0.6;">[${time}]</span> ${text}`;
-  logConsole.appendChild(entry);
-  logConsole.scrollTop = logConsole.scrollHeight;
+  if (logConsole) {
+    logConsole.appendChild(entry);
+    logConsole.scrollTop = logConsole.scrollHeight;
+  }
 }
 
-// 1. Initialize Rime Client
+// 1. Initialize Rime Client (Speaker: celeste, Model: coda)
 const rimeClient = new RimeClient({
   speaker: 'celeste',
   modelId: 'coda'
 });
 
-// Elements for Robot Speech & Hearing HUD
-const robotEarHud = document.getElementById('robot-ear-hud');
-const earPulseDot = document.getElementById('ear-pulse-dot');
-const robotSpeechHud = document.getElementById('robot-speech-hud');
-const speechHudTitle = document.getElementById('speech-hud-title');
-const speechEqBars = document.getElementById('speech-eq-bars');
-const robotContainer = document.getElementById('robot-container');
-const robotWrapper = document.getElementById('robot-wrapper');
-const robotAura = document.getElementById('robot-aura');
-const robotActionText = document.getElementById('robot-action-text');
-const robotExerciseIndicator = document.getElementById('robot-exercise-indicator');
+// Helper to update Robot Mascot and Stage Subtitles
+function updateSpeechHUD(text, isSpeaking) {
+  const stageSpeechHud = document.getElementById('stage-robot-speech-hud');
+  const stageSubtitle = document.getElementById('stage-coach-subtitle');
+  const stageHudTitle = document.getElementById('stage-speech-hud-title');
+
+  if (stageSubtitle && text) {
+    stageSubtitle.textContent = `"${text}"`;
+  }
+
+  if (stageSpeechHud) {
+    if (isSpeaking) {
+      stageSpeechHud.classList.add('is-talking');
+      if (stageHudTitle) stageHudTitle.textContent = 'COACH CELESTE • SPEAKING';
+    } else {
+      stageSpeechHud.classList.remove('is-talking');
+      if (stageHudTitle) stageHudTitle.textContent = 'COACH CELESTE • READY';
+    }
+  }
+}
 
 // 2. Initialize Audio Controller with live Robot sync
 const audioController = new AudioController(
   rimeClient,
   (subtitle) => {
-    coachSubtitleEl.textContent = `"${subtitle}"`;
+    updateSpeechHUD(subtitle, true);
     logMessage(`🗣️ Coach: "${subtitle}"`, 'coach');
   },
   (logText, logType) => {
     logMessage(logText, logType);
   },
   (isPlaying, text) => {
-    if (isPlaying) {
-      if (robotSpeechHud) robotSpeechHud.classList.add('is-talking');
-      if (speechHudTitle) speechHudTitle.textContent = 'COACH CELESTE • SPEAKING';
-      if (robotAura) robotAura.classList.add('talking-pulse');
-      if (robotActionText) robotActionText.textContent = '🎙️ Coach Speaking...';
-    } else {
-      if (robotSpeechHud) robotSpeechHud.classList.remove('is-talking');
-      if (speechHudTitle) speechHudTitle.textContent = 'COACH CELESTE • READY';
-      if (robotAura) robotAura.classList.remove('talking-pulse');
-      
-      const ctx = stateMachine.getContext();
-      if (ctx.state === STATES.EXERCISE_REPS) {
-        if (robotActionText) robotActionText.textContent = `Set ${ctx.set}: Rep ${ctx.rep}`;
-      } else if (ctx.state === STATES.REST_TIMER) {
-        if (robotActionText) robotActionText.textContent = `Rest & Breathe (${ctx.restRemaining}s)`;
-      } else if (ctx.state === STATES.PAUSED) {
-        if (robotActionText) robotActionText.textContent = 'Workout Paused (Holding)';
-      } else {
-        if (robotActionText) robotActionText.textContent = 'Coach Standing By';
-      }
-    }
+    updateSpeechHUD(text, isPlaying);
   }
 );
 
-function resetRobotAnimations() {
-  if (!robotWrapper) return;
-  robotWrapper.classList.remove(
-    'action-pushup-rep',
-    'action-squat-rep',
-    'action-jump-rep',
-    'action-plank-hold',
-    'action-rest-breathe',
-    'action-interrupted',
-    'action-victory',
-    'action-countdown'
-  );
-}
-
-function updateRobotAction(actionType, text, exerciseName = '') {
-  if (!robotWrapper) return;
-
-  if (robotExerciseIndicator && exerciseName) {
-    robotExerciseIndicator.textContent = exerciseName;
-  }
-
-  if (robotActionText && text) {
-    robotActionText.textContent = text;
-  }
-
-  if (robotAura) {
-    robotAura.className = 'robot-aura';
-    if (actionType && actionType.includes('pushup')) robotAura.classList.add('aura-pushup');
-    else if (actionType && actionType.includes('squat')) robotAura.classList.add('aura-squat');
-    else if (actionType && actionType.includes('rest')) robotAura.classList.add('aura-rest');
-    else if (actionType && actionType.includes('victory')) robotAura.classList.add('aura-victory');
-  }
-
-  resetRobotAnimations();
-  void robotWrapper.offsetWidth; // Trigger reflow
-
-  if (actionType) {
-    robotWrapper.classList.add(actionType);
-  }
-}
-
-function triggerRobotRepAction(exerciseName, repNumber) {
-  if (!robotWrapper) return;
-  const ex = (exerciseName || '').toLowerCase();
-  const pacingSec = (stateMachine.repPacingMs / 1000).toFixed(2);
-  robotWrapper.style.setProperty('--pacing-duration', `${pacingSec}s`);
-
-  if (ex.includes('push') || ex.includes('chest') || ex.includes('press')) {
-    updateRobotAction('action-pushup-rep', `Push-Up Rep ${repNumber}`, exerciseName);
-  } else if (ex.includes('squat') || ex.includes('lunge') || ex.includes('leg')) {
-    updateRobotAction('action-squat-rep', `Squat Rep ${repNumber}`, exerciseName);
-  } else if (ex.includes('jump') || ex.includes('jack') || ex.includes('burpee')) {
-    updateRobotAction('action-jump-rep', `Jump Rep ${repNumber}`, exerciseName);
-  } else if (ex.includes('plank') || ex.includes('hold')) {
-    updateRobotAction('action-plank-hold', `Plank Hold (Rep ${repNumber})`, exerciseName);
-  } else {
-    updateRobotAction('action-squat-rep', `Rep ${repNumber}`, exerciseName);
-  }
-}
-
-function triggerRobotBargeIn() {
-  if (robotSpeechHud) {
-    robotSpeechHud.classList.remove('is-talking');
-    robotSpeechHud.classList.add('is-interrupted');
-    if (speechHudTitle) speechHudTitle.textContent = '⚡ BARGE-IN CUTOFF (<1ms)';
-    setTimeout(() => {
-      if (robotSpeechHud) robotSpeechHud.classList.remove('is-interrupted');
-      if (speechHudTitle) speechHudTitle.textContent = 'COACH CELESTE • READY';
-    }, 1500);
-  }
-
-  if (!robotWrapper) return;
-  resetRobotAnimations();
-  void robotWrapper.offsetWidth;
-  robotWrapper.classList.add('action-interrupted');
-  if (robotActionText) robotActionText.textContent = '⚡ Barge-In Halt!';
-  setTimeout(() => {
-    if (robotWrapper && robotWrapper.classList.contains('action-interrupted')) {
-      robotWrapper.classList.remove('action-interrupted');
-    }
-  }, 380);
-}
-
-// 3. Initialize State Machine
+// 3. Initialize Finite State Machine (FSM)
 const stateMachine = new WorkoutStateMachine({
   audioController,
   soundFx,
-  onStateChange: (state, ctx) => {
-    updateHUDState(state, ctx);
+  onStateChange: (newState, context) => {
+    updateHUD(newState, context);
+    if (exerciseVisualizer) {
+      exerciseVisualizer.setState(
+        newState,
+        context.rep,
+        context.targetReps,
+        context.restRemaining,
+        context.totalRest
+      );
+      if (context.exercise) {
+        exerciseVisualizer.setExercise(context.exercise.id);
+      }
+    }
+    if (collabBg) {
+      collabBg.triggerPulse(true);
+    }
   },
-  onTick: (remaining, total) => {
-    hudNumberEl.textContent = `${remaining}`;
-    hudLabelEl.textContent = 'SEC REST';
-    const fraction = remaining / total;
-    circleProgressEl.style.strokeDashoffset = `${CIRCLE_CIRCUMFERENCE * (1 - fraction)}`;
-    if (robotActionText) robotActionText.textContent = `Rest & Breathe (${remaining}s)`;
+  onTick: (context) => {
+    updateHUD(context.state, context);
+    if (exerciseVisualizer) {
+      exerciseVisualizer.setState(
+        context.state,
+        context.rep,
+        context.targetReps,
+        context.restRemaining,
+        context.totalRest
+      );
+    }
+    if (collabBg) {
+      collabBg.setRepIntensity(context.state === STATES.EXERCISE_REPS ? 1.2 : 0.4);
+    }
   },
-  onRep: (currentRep, targetReps) => {
-    hudNumberEl.textContent = `${currentRep}`;
-    hudLabelEl.textContent = `OF ${targetReps} REPS`;
-    const fraction = currentRep / targetReps;
-    circleProgressEl.style.strokeDashoffset = `${CIRCLE_CIRCUMFERENCE * (1 - fraction)}`;
-    
-    // Animate Robot to match the exercise rep motion
-    const exName = stateMachine.currentExercise ? stateMachine.currentExercise.name : 'Rep';
-    triggerRobotRepAction(exName, currentRep);
+  onRep: (repNum, repTarget) => {
+    soundFx.playRepDing();
+    if (collabBg) {
+      collabBg.triggerPulse(false);
+    }
   },
   onLog: (msg, type) => {
     logMessage(msg, type);
   }
 });
 
-// Update HUD when state changes
-function updateHUDState(state, ctx) {
-  stateBadge.className = 'state-tag';
-  circleProgressEl.classList.remove('rest-mode');
+// Update UI on State Changes
+function updateHUD(state, context) {
+  const ex = context.exercise || {};
+  const set = context.set || 1;
+  const totalSets = context.totalSets || ex.sets || 3;
+  const rep = context.rep || 0;
+  const targetReps = context.targetReps || ex.reps || 8;
+  const restRemaining = context.restRemaining || 0;
+  const totalRest = context.totalRest || ex.restSeconds || 30;
 
-  if (state === STATES.IDLE) {
-    stateBadge.textContent = 'READY';
-    btnLabel.textContent = 'START WORKOUT';
-    btnIcon.textContent = '▶';
-    btnToggleWorkout.classList.remove('btn-pause');
-    btnSkipRest.style.display = 'none';
-    hudNumberEl.textContent = '0';
-    hudLabelEl.textContent = 'REPS';
-    circleProgressEl.style.strokeDashoffset = '0';
-    exerciseNameEl.textContent = ctx.exercise.name;
-    workoutTargetEl.textContent = `Target: ${ctx.exercise.reps} Reps • ${ctx.exercise.restSeconds}s Rest`;
-    updateRobotAction('', 'Coach Standing By', 'Ready');
-  } else if (state === STATES.COUNTDOWN) {
-    stateBadge.textContent = 'COUNTDOWN';
-    stateBadge.classList.add('active-workout');
-    btnLabel.textContent = 'PAUSE WORKOUT';
-    btnIcon.textContent = '⏸';
-    btnToggleWorkout.classList.add('btn-pause');
-    btnSkipRest.style.display = 'none';
-    updateRobotAction('action-countdown', 'Get In Position!', ctx.exercise.name);
-  } else if (state === STATES.EXERCISE_REPS) {
-    stateBadge.textContent = 'SET IN PROGRESS';
-    stateBadge.classList.add('active-workout');
-    exerciseNameEl.textContent = ctx.exercise.name;
-    setBadge.textContent = `SET ${ctx.set} OF ${ctx.exercise.sets}`;
-    workoutTargetEl.textContent = `Target: ${ctx.exercise.reps} Reps • ${ctx.exercise.restSeconds}s Rest`;
-    btnLabel.textContent = 'PAUSE WORKOUT';
-    btnIcon.textContent = '⏸';
-    btnToggleWorkout.classList.add('btn-pause');
-    btnSkipRest.style.display = 'none';
-    updateRobotAction('', `Set ${ctx.set}: Ready for Rep 1`, ctx.exercise.name);
-  } else if (state === STATES.REST_TIMER) {
-    stateBadge.textContent = 'REST PERIOD';
-    stateBadge.classList.add('active-rest');
-    circleProgressEl.classList.add('rest-mode');
-    btnSkipRest.style.display = 'inline-block';
-    hudNumberEl.textContent = `${ctx.restRemaining}`;
-    hudLabelEl.textContent = 'SEC REST';
-    updateRobotAction('action-rest-breathe', `Rest & Recovery (${ctx.restRemaining}s)`, 'Rest');
-  } else if (state === STATES.PAUSED) {
-    stateBadge.textContent = 'PAUSED';
-    btnLabel.textContent = 'RESUME WORKOUT';
-    btnIcon.textContent = '▶';
-    btnToggleWorkout.classList.remove('btn-pause');
-    updateRobotAction('', 'Workout Paused (Holding)', 'Paused');
-  } else if (state === STATES.COMPLETED) {
-    stateBadge.textContent = 'COMPLETED';
-    stateBadge.classList.add('active-workout');
-    btnLabel.textContent = 'RESTART WORKOUT';
-    btnIcon.textContent = '🔄';
-    btnToggleWorkout.classList.remove('btn-pause');
-    btnSkipRest.style.display = 'none';
-    updateRobotAction('action-victory', 'Workout Crushed! 🏆', 'Champion');
+  if (exerciseNameEl) exerciseNameEl.textContent = ex.name || 'Push-ups';
+  if (workoutTargetEl) workoutTargetEl.textContent = `Target: ${targetReps} Reps • ${totalRest}s Rest`;
+  if (setBadge) setBadge.textContent = `SET ${set} OF ${totalSets}`;
+
+  // Reset tag classes
+  if (stateBadge) {
+    stateBadge.className = 'state-tag';
+
+    switch (state) {
+      case STATES.IDLE:
+        stateBadge.textContent = 'READY';
+        hudNumberEl.textContent = '0';
+        hudLabelEl.textContent = 'REPS';
+        btnLabel.textContent = 'START WORKOUT';
+        btnIcon.textContent = '▶';
+        btnToggleWorkout.className = 'btn-primary';
+        btnSkipRest.style.display = 'none';
+        setProgressOffset(0, 1);
+        break;
+
+      case STATES.COUNTDOWN:
+        stateBadge.textContent = 'GET READY';
+        stateBadge.classList.add('countdown');
+        hudNumberEl.textContent = restRemaining;
+        hudLabelEl.textContent = 'SECONDS';
+        btnLabel.textContent = 'PAUSE';
+        btnIcon.textContent = '⏸';
+        btnToggleWorkout.className = 'btn-primary pause';
+        btnSkipRest.style.display = 'none';
+        setProgressOffset(restRemaining, 3);
+        break;
+
+      case STATES.EXERCISE_REPS:
+        stateBadge.textContent = 'ACTIVE SET';
+        stateBadge.classList.add('active-workout');
+        hudNumberEl.textContent = rep;
+        hudLabelEl.textContent = `OF ${targetReps} REPS`;
+        btnLabel.textContent = 'PAUSE';
+        btnIcon.textContent = '⏸';
+        btnToggleWorkout.className = 'btn-primary pause';
+        btnSkipRest.style.display = 'none';
+        setProgressOffset(rep, targetReps);
+        break;
+
+      case STATES.REST_TIMER:
+        stateBadge.textContent = 'RESTING';
+        stateBadge.classList.add('resting');
+        hudNumberEl.textContent = restRemaining;
+        hudLabelEl.textContent = 'SEC REST';
+        btnLabel.textContent = 'PAUSE';
+        btnIcon.textContent = '⏸';
+        btnToggleWorkout.className = 'btn-primary pause';
+        btnSkipRest.style.display = 'inline-flex';
+        setProgressOffset(restRemaining, totalRest);
+        break;
+
+      case STATES.PAUSED:
+        stateBadge.textContent = 'PAUSED';
+        stateBadge.classList.add('paused');
+        btnLabel.textContent = 'RESUME';
+        btnIcon.textContent = '▶';
+        btnToggleWorkout.className = 'btn-primary';
+        break;
+
+      case STATES.COMPLETED:
+        stateBadge.textContent = 'WORKOUT COMPLETED';
+        stateBadge.classList.add('active-workout');
+        hudNumberEl.textContent = '🏆';
+        hudLabelEl.textContent = 'DONE';
+        btnLabel.textContent = 'START AGAIN';
+        btnIcon.textContent = '↺';
+        btnToggleWorkout.className = 'btn-primary';
+        btnSkipRest.style.display = 'none';
+        setProgressOffset(1, 1);
+        break;
+    }
   }
 }
 
-// 4. Initialize Voice Listener with Barge-In Logic
+function setProgressOffset(current, max) {
+  if (!circleProgressEl) return;
+  const progress = max > 0 ? Math.min(Math.max(current / max, 0), 1) : 0;
+  const offset = CIRCLE_CIRCUMFERENCE * (1 - progress);
+  circleProgressEl.style.strokeDashoffset = `${offset}`;
+}
+
+// 4. Initialize Voice Listener with Zero-Latency Barge-In
 const voiceListener = new VoiceListener({
   onSpeechStart: () => {
-    if (robotEarHud) robotEarHud.classList.add('is-hearing');
-    if (micIndicator) micIndicator.textContent = 'EAR • HEARING SPEECH';
+    const stageEarHud = document.getElementById('stage-robot-ear-hud');
+    const stageMicIndicator = document.getElementById('stage-mic-indicator');
+    if (stageEarHud) stageEarHud.classList.add('is-hearing');
+    if (stageMicIndicator) stageMicIndicator.textContent = 'EAR • HEARING SPEECH';
 
     // If coach is speaking, user has started interrupting!
     if (audioController.isPlaying) {
@@ -311,51 +275,55 @@ const voiceListener = new VoiceListener({
   onStatusChange: (status) => {
     const btnMicToggle = document.getElementById('btn-mic-toggle');
     const btnMicText = document.getElementById('btn-mic-text');
+    const stageEarHud = document.getElementById('stage-robot-ear-hud');
+    const stageMicIndicator = document.getElementById('stage-mic-indicator');
 
     if (status === 'LISTENING') {
-      if (robotEarHud) robotEarHud.classList.remove('is-hearing');
-      if (micIndicator) micIndicator.textContent = 'EAR SENSOR • LISTENING';
+      if (stageEarHud) stageEarHud.classList.remove('is-hearing');
+      if (stageMicIndicator) stageMicIndicator.textContent = 'EAR SENSOR • LISTENING';
       if (btnMicToggle) btnMicToggle.classList.add('active');
       if (btnMicText) btnMicText.textContent = '🎙️ Mic Active (Listening)';
     } else if (status === 'SPEECH_DETECTED') {
-      if (robotEarHud) robotEarHud.classList.add('is-hearing');
-      if (micIndicator) micIndicator.textContent = 'EAR • HEARING...';
+      if (stageEarHud) stageEarHud.classList.add('is-hearing');
+      if (stageMicIndicator) stageMicIndicator.textContent = 'EAR • HEARING...';
       if (btnMicText) btnMicText.textContent = '🎙️ Hearing You...';
     } else if (status === 'OFF') {
-      if (robotEarHud) robotEarHud.classList.remove('is-hearing');
-      if (micIndicator) micIndicator.textContent = 'EAR • STANDBY';
+      if (stageEarHud) stageEarHud.classList.remove('is-hearing');
+      if (stageMicIndicator) stageMicIndicator.textContent = 'EAR • STANDBY';
       if (btnMicToggle) btnMicToggle.classList.remove('active');
       if (btnMicText) btnMicText.textContent = '🎙️ Start Hands-Free Mic';
     } else if (status === 'MIC_BLOCKED') {
-      if (robotEarHud) robotEarHud.classList.remove('is-hearing');
-      if (micIndicator) micIndicator.textContent = 'MIC BLOCKED';
+      if (stageEarHud) stageEarHud.classList.remove('is-hearing');
+      if (stageMicIndicator) stageMicIndicator.textContent = 'MIC BLOCKED';
       if (btnMicToggle) btnMicToggle.classList.remove('active');
       if (btnMicText) btnMicText.textContent = '❌ Mic Blocked (Click)';
     }
   },
   onInterim: (text) => {
-    if (heardTranscriptEl) heardTranscriptEl.textContent = `"${text}"`;
-    if (robotEarHud) robotEarHud.classList.add('is-hearing');
+    const stageTranscript = document.getElementById('stage-heard-transcript');
+    if (stageTranscript) stageTranscript.textContent = `"${text}"`;
+    const stageEarHud = document.getElementById('stage-robot-ear-hud');
+    if (stageEarHud) stageEarHud.classList.add('is-hearing');
   },
-  onCommand: (command, rawText) => {
-    handleSpokenCommand(command, rawText);
+  onCommand: (command, rawText, subReason) => {
+    handleSpokenCommand(command, rawText, subReason);
   },
   onLog: (msg, type) => {
     logMessage(msg, type);
   }
 });
 
-// Common Barge-In Trigger
+// Common Barge-In Trigger (<1ms audio cutoff)
 function triggerBargeIn(reason) {
   interruptCount++;
-  interruptCountBadge.textContent = `${interruptCount} Interrupt${interruptCount > 1 ? 's' : ''}`;
+  if (interruptCountBadge) {
+    interruptCountBadge.textContent = `${interruptCount} Interrupt${interruptCount > 1 ? 's' : ''}`;
+  }
   
-  // Flash state tag on screen
-  stateBadge.classList.add('interrupted');
-  setTimeout(() => stateBadge.classList.remove('interrupted'), 400);
-
-  // Trigger 3D robot reaction
-  triggerRobotBargeIn();
+  if (stateBadge) {
+    stateBadge.classList.add('interrupted');
+    setTimeout(() => stateBadge.classList.remove('interrupted'), 400);
+  }
 
   // Play glitch sound effect and cut audio
   soundFx.playBargeInGlitch();
@@ -363,9 +331,10 @@ function triggerBargeIn(reason) {
 }
 
 // Spoken Command Router with Dynamic AI Semantic Brain
-async function handleSpokenCommand(fallbackCommand, rawText) {
+async function handleSpokenCommand(fallbackCommand, rawText, subReason) {
   logMessage(`🎙️ [HEARD] "${rawText}"`, 'user');
-  if (heardTranscriptEl) heardTranscriptEl.textContent = `"${rawText}"`;
+  const stageTranscript = document.getElementById('stage-heard-transcript');
+  if (stageTranscript) stageTranscript.textContent = `"${rawText}"`;
 
   // 1. Instant hardware audio cutoff (<1ms)
   triggerBargeIn(`Spoken input: "${rawText}"`);
@@ -380,6 +349,7 @@ async function handleSpokenCommand(fallbackCommand, rawText) {
     } else if (stateMachine.state === STATES.REST_TIMER) {
       stateMachine.skipRest();
     }
+    audioController.speak("Starting workout! Let's crush this session!", true);
     return;
   }
 
@@ -392,18 +362,38 @@ async function handleSpokenCommand(fallbackCommand, rawText) {
     } else if (stateMachine.state === STATES.REST_TIMER) {
       stateMachine.skipRest();
     }
+    audioController.speak("Awesome! Let's get right back to work.", true);
     return;
   }
 
   if (fallbackCommand === 'PAUSE') {
-    logMessage(`🎯 Instant Executing: PAUSE WORKOUT`, 'info');
     stateMachine.pause();
+    const clean = (rawText || '').toLowerCase();
+
+    if (subReason === 'WATER' || clean.includes('water') || clean.includes('drink') || clean.includes('sip') || clean.includes('thirsty')) {
+      logMessage(`💧 Instant Executing: PAUSE (Water Break)`, 'info');
+      audioController.speak("Workout paused for water break. Stay hydrated, champ! Say start or resume when you're ready.", true);
+    } else if (subReason === 'REST' || clean.includes('breathe') || clean.includes('breath') || clean.includes('tired') || clean.includes('exhausted')) {
+      logMessage(`🫁 Instant Executing: PAUSE (Breather)`, 'info');
+      audioController.speak("Workout paused. Catch your breath! Say start or resume whenever you're ready.", true);
+    } else if (subReason === 'PAIN' || clean.includes('hurt') || clean.includes('pain') || clean.includes('elbow') || clean.includes('shoulder')) {
+      logMessage(`🛡️ Instant Executing: PAUSE (Safety Check)`, 'info');
+      if (clean.includes('elbow')) {
+        audioController.speak("Workout paused. Tuck your elbows to forty-five degrees and avoid flaring out. Say start when ready.", true);
+      } else {
+        audioController.speak("Workout paused for safety. Check your form, take a breath, and don't push through joint pain. Say start when ready.", true);
+      }
+    } else {
+      logMessage(`🎯 Instant Executing: PAUSE WORKOUT`, 'info');
+      audioController.speak("Workout paused. Say start or resume when you're ready.", true);
+    }
     return;
   }
 
   if (fallbackCommand === 'SKIP_REST') {
     logMessage(`🎯 Instant Executing: SKIP REST`, 'success');
     stateMachine.skipRest();
+    audioController.speak("Skipping rest! Next set starts now.", true);
     return;
   }
 
@@ -412,101 +402,19 @@ async function handleSpokenCommand(fallbackCommand, rawText) {
     if (stateMachine.state === STATES.REST_TIMER) {
       stateMachine.addRestSeconds(10);
     }
+    audioController.speak("Added ten more seconds to rest. Breathe deep!", true);
     return;
   }
 
-  // 3. Query AI Semantic Intent Engine for Conversational Queries, Pain, or Health Inquiries
-  const ctx = stateMachine.getContext();
-  try {
-    const res = await fetch('/api/intent-ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        utterance: rawText,
-        workoutContext: {
-          exerciseName: ctx.exercise.name,
-          set: ctx.set,
-          state: ctx.state
-        }
-      })
-    });
-
-    const data = await res.json();
-    const action = data.action || fallbackCommand;
-    logMessage(`🧠 [AI INTENT (${data.source})] "${rawText}" ➔ ${action}`, 'success');
-
-    switch (action) {
-      case 'START':
-        logMessage(`🎯 AI Executing: START WORKOUT`, 'success');
-        if (stateMachine.state === STATES.IDLE || stateMachine.state === STATES.COMPLETED) {
-          stateMachine.startWorkout();
-        } else if (stateMachine.state === STATES.PAUSED) {
-          stateMachine.resume();
-        } else if (stateMachine.state === STATES.REST_TIMER) {
-          stateMachine.skipRest();
-        }
-        break;
-
-      case 'SKIP_REST':
-        logMessage(`🎯 AI Executing: SKIP REST`, 'success');
-        stateMachine.skipRest();
-        break;
-
-      case 'PAUSE':
-        logMessage(`🎯 AI Executing: PAUSE WORKOUT`, 'info');
-        stateMachine.pause();
-        if (data.spokenFeedback) {
-          audioController.speak(data.spokenFeedback, true);
-        }
-        break;
-
-      case 'RESUME':
-        logMessage(`🎯 AI Executing: RESUME WORKOUT`, 'success');
-        if (stateMachine.state === STATES.PAUSED) {
-          stateMachine.resume();
-        } else if (stateMachine.state === STATES.IDLE) {
-          stateMachine.startWorkout();
-        } else if (stateMachine.state === STATES.REST_TIMER) {
-          stateMachine.skipRest();
-        }
-        break;
-
-      case 'ADD_REST':
-        const secs = data.parameter || 10;
-        logMessage(`🎯 AI Executing: ADD ${secs}s REST`, 'success');
-        if (stateMachine.state === STATES.REST_TIMER) {
-          stateMachine.addRestSeconds(secs);
-        } else {
-          audioController.speak(data.spokenFeedback || `Added ${secs} seconds.`);
-        }
-        break;
-
-      case 'NEXT_EXERCISE':
-        logMessage(`🎯 AI Executing: NEXT EXERCISE`, 'success');
-        stateMachine.nextExercise();
-        break;
-
-      case 'COACH_ADVICE':
-      default:
-        if (data.spokenFeedback) {
-          logMessage(`✨ [COACH ADVICE (${data.source})] "${data.spokenFeedback}"`, 'coach');
-          audioController.speak(data.spokenFeedback, true);
-        } else {
-          askAiCoach(rawText);
-        }
-        break;
-    }
-  } catch (err) {
-    console.error('Intent parsing error:', err);
-    if (fallbackCommand === 'START') {
-      if (stateMachine.state === STATES.IDLE) stateMachine.startWorkout();
-      else if (stateMachine.state === STATES.PAUSED) stateMachine.resume();
-    } else if (fallbackCommand === 'SKIP_REST') {
-      stateMachine.skipRest();
-    } else if (fallbackCommand === 'PAUSE') {
-      stateMachine.pause();
-    }
+  if (fallbackCommand === 'NEXT_EXERCISE') {
+    logMessage(`🎯 Instant Executing: NEXT EXERCISE`, 'success');
+    stateMachine.nextExercise();
+    audioController.speak("Moving to next exercise!", true);
+    return;
   }
+
+  // 3. Conversational AI Brain (Powered by gemini-web2api)
+  askAiCoach(rawText);
 }
 window.handleSpokenCommand = handleSpokenCommand;
 
@@ -516,6 +424,7 @@ async function askAiCoach(question) {
 
   triggerBargeIn('User asked AI Coach question');
   logMessage(`🤖 [AI INQUIRY] "${question}"`, 'user');
+  updateSpeechHUD('Analyzing question with AI...', false);
 
   const ctx = stateMachine.getContext();
   try {
@@ -532,186 +441,219 @@ async function askAiCoach(question) {
       })
     });
 
-    const data = await res.json();
-    if (data.reply) {
-      logMessage(`✨ [AI COACH (${data.source})] "${data.reply}"`, 'success');
-      audioController.speak(data.reply, true);
+    if (res.ok) {
+      const data = await res.json();
+      const reply = data.reply || "Keep your form clean and your core braced tight!";
+      logMessage(`💡 [AI COACH (${data.source})] "${reply}"`, 'coach');
+      audioController.speak(reply, true);
+    } else {
+      fallbackCoachAdvice(question);
     }
   } catch (err) {
-    console.error('Error contacting AI coach:', err);
-    audioController.speak("Keep your head in the game! Stay focused on your breathing.", true);
+    console.error('AI error:', err);
+    fallbackCoachAdvice(question);
   }
 }
 
-// Equalizer Waveform Animation
+function fallbackCoachAdvice(question) {
+  const lower = question.toLowerCase();
+  let advice = "Keep your core braced and focus on clean movement!";
+  if (lower.includes('elbow')) advice = "Keep your elbows tucked at 45 degrees, avoid flaring out.";
+  else if (lower.includes('form') || lower.includes('push')) advice = "Chest to floor, glutes tight, neutral spine.";
+  else if (lower.includes('squat')) advice = "Drive knees outward over toes, chest up, press through heels.";
+  else if (lower.includes('water') || lower.includes('drink')) advice = "Workout paused for water break. Stay hydrated!";
+  
+  logMessage(`💡 [COACH ADVICE] "${advice}"`, 'coach');
+  audioController.speak(advice, true);
+}
+
+// Visualizer Waveform Audio Monitor
 function initWaveformVisualizer() {
   if (!visualizerCanvas) return;
-  const ctx = visualizerCanvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const w = visualizerCanvas.clientWidth || 300;
-  const h = 26;
-  visualizerCanvas.width = w * dpr;
-  visualizerCanvas.height = h * dpr;
-  ctx.scale(dpr, dpr);
+  const canvas = visualizerCanvas;
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width = canvas.parentElement.clientWidth || 300;
+    canvas.height = 42;
+  }
+  resize();
+  window.addEventListener('resize', resize);
 
   let phase = 0;
   function draw() {
     requestAnimationFrame(draw);
-    ctx.clearRect(0, 0, w, h);
+    phase += 0.05;
 
-    const isLive = audioController.isPlaying || voiceListener.isListening;
-    const barCount = 36;
-    const barWidth = (w / barCount) - 3;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const isVoiceActive = audioController.isPlaying || voiceListener.isListening;
+    const baseAmp = isVoiceActive ? (audioController.isPlaying ? 14 : 7) : 2;
 
-    for (let i = 0; i < barCount; i++) {
-      let amp = 3;
-      if (audioController.isPlaying) {
-        amp = Math.sin(phase + i * 0.4) * 8 + 11;
-      } else if (voiceListener.isListening) {
-        amp = Math.sin(phase * 0.5 + i * 0.25) * 4 + 6;
-      }
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height / 2);
 
-      ctx.fillStyle = audioController.isPlaying ? '#06b6d4' : (voiceListener.isListening ? '#10b981' : '#334155');
-      const x = i * (barWidth + 3);
-      const y = (h - amp) / 2;
-      ctx.beginPath();
-      ctx.roundRect(x, y, barWidth, amp, 3);
-      ctx.fill();
+    for (let x = 0; x < canvas.width; x += 4) {
+      const freq = 0.04;
+      const y = canvas.height / 2 + Math.sin(x * freq + phase) * baseAmp * Math.sin(x * 0.01);
+      ctx.lineTo(x, y);
     }
-    phase += 0.15;
+
+    ctx.strokeStyle = audioController.isPlaying ? '#E07A5F' : (voiceListener.isListening ? '#2A9D8F' : 'rgba(212, 163, 115, 0.35)');
+    ctx.lineWidth = 2;
+    ctx.stroke();
   }
   draw();
 }
 
-// Button Events
-btnToggleWorkout.addEventListener('click', () => {
-  soundFx.init();
-  audioController.initAudioContext();
-  voiceListener.start();
-
-  if (stateMachine.state === STATES.IDLE || stateMachine.state === STATES.COMPLETED) {
-    stateMachine.startWorkout();
-  } else if (stateMachine.state === STATES.PAUSED) {
-    stateMachine.resume();
-  } else {
-    stateMachine.pause();
-  }
-});
-
-btnSkipRest.addEventListener('click', () => {
-  triggerBargeIn('Manual UI Button Click');
-  stateMachine.skipRest();
-});
-
-// Routine Switcher Events
-routinePills.forEach(pill => {
-  pill.addEventListener('click', () => {
-    routinePills.forEach(p => p.classList.remove('active'));
-    pill.classList.add('active');
-    const routineKey = pill.getAttribute('data-routine');
-    stateMachine.setRoutine(routineKey);
+// Clickable Conversational Voice Chips
+function initVoiceChips() {
+  document.querySelectorAll('.voice-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const text = chip.getAttribute('data-speak');
+      if (text) {
+        logMessage(`👆 Simulating spoken phrase: "${text}"`, 'user');
+        voiceListener.checkFastCommands(text);
+      }
+    });
   });
-});
+}
 
-// Rep Pacing Selector Events
-pacingBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    pacingBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const pacingMs = parseInt(btn.getAttribute('data-pacing'), 10);
-    stateMachine.setPacing(pacingMs);
+// Pronunciation Lab Compare Audio
+function initPronunciationLab() {
+  document.querySelectorAll('.btn-compare-audio').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const textA = btn.getAttribute('data-a');
+      const textB = btn.getAttribute('data-b');
+      btn.disabled = true;
+      btn.textContent = 'Speaking...';
+
+      logMessage(`🔬 Pronunciation Compare: "${textA}" vs "${textB}"`, 'info');
+      await audioController.speak(textA);
+      await new Promise(r => setTimeout(r, 600));
+      await audioController.speak(textB);
+
+      btn.disabled = false;
+      btn.textContent = 'Compare';
+    });
   });
-});
+}
 
-// Audio Volume & Mute Controls
-btnMute.addEventListener('click', () => {
-  soundFx.setMuted(!soundFx.isMuted);
-  btnMute.textContent = soundFx.isMuted ? '🔇' : '🔊';
-});
-
-volSlider.addEventListener('input', (e) => {
-  const vol = parseFloat(e.target.value);
-  soundFx.setVolume(vol);
-});
-
-// AI Coach Question Form
-btnAskAi.addEventListener('click', () => {
-  const q = aiPromptInput.value.trim();
-  if (q) {
-    askAiCoach(q);
-    aiPromptInput.value = '';
+// Event Bindings
+function initEvents() {
+  // Workout Toggle Button
+  if (btnToggleWorkout) {
+    btnToggleWorkout.addEventListener('click', () => {
+      if (stateMachine.state === STATES.IDLE || stateMachine.state === STATES.COMPLETED) {
+        stateMachine.startWorkout();
+      } else if (stateMachine.state === STATES.PAUSED) {
+        stateMachine.resume();
+      } else {
+        stateMachine.pause();
+      }
+    });
   }
-});
 
-aiPromptInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    const q = aiPromptInput.value.trim();
-    if (q) {
-      askAiCoach(q);
-      aiPromptInput.value = '';
-    }
+  // Skip Rest Button
+  if (btnSkipRest) {
+    btnSkipRest.addEventListener('click', () => {
+      stateMachine.skipRest();
+    });
   }
-});
 
-// Simulated Voice Commands
-testVoiceSkip.addEventListener('click', () => {
-  handleSpokenCommand('SKIP_REST', 'skip it, next set (simulated)');
-});
+  // Routine Selectors
+  routinePills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      routinePills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const key = pill.getAttribute('data-routine');
+      stateMachine.setRoutine(key);
+      if (exerciseVisualizer) {
+        const plan = WORKOUT_ROUTINES[key];
+        if (plan && plan.exercises[0]) {
+          exerciseVisualizer.setExercise(plan.exercises[0].id);
+        }
+      }
+    });
+  });
 
-testVoiceStop.addEventListener('click', () => {
-  handleSpokenCommand('PAUSE', 'stop (simulated)');
-});
+  // Pacing Selectors
+  pacingBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      pacingBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const pacing = parseInt(btn.getAttribute('data-pacing'), 10);
+      stateMachine.setRepPacing(pacing);
+    });
+  });
 
-// Problem 2: Pronunciation & Delivery Lab Event Listener
-const compareBtns = document.querySelectorAll('.btn-compare-audio');
-compareBtns.forEach(btn => {
-  btn.addEventListener('click', async () => {
-    soundFx.init();
-    audioController.initAudioContext();
-    const testId = btn.getAttribute('data-test');
-    const varA = btn.getAttribute('data-a');
-    const varB = btn.getAttribute('data-b');
+  // Master Volume Controls
+  if (btnMute) {
+    btnMute.addEventListener('click', () => {
+      const isMuted = audioController.toggleMute();
+      btnMute.textContent = isMuted ? '🔇' : '🔊';
+    });
+  }
 
-    logMessage(`🔬 [PRONUNCIATION LAB] Testing Variant A ("${varA}") vs Variant B ("${varB}")`, 'info');
-    
-    // Announce Variant A
-    logMessage(`🔊 Playing Variant A: "${varA}"`, 'coach');
-    await audioController.speak(`Variant A: ${varA}`, true);
+  if (volSlider) {
+    volSlider.addEventListener('input', (e) => {
+      const vol = parseFloat(e.target.value);
+      audioController.setVolume(vol);
+    });
+  }
 
-    await new Promise(r => setTimeout(r, 800));
+  // Live Hands-Free Mic Toggle Button
+  const btnMicToggle = document.getElementById('btn-mic-toggle');
+  if (btnMicToggle) {
+    btnMicToggle.addEventListener('click', () => {
+      voiceListener.toggle();
+    });
+  }
 
-    // Announce Variant B
-    logMessage(`🔊 Playing Variant B: "${varB}"`, 'coach');
-    await audioController.speak(`Variant B: ${varB}`, true);
+  // Ask AI text input
+  if (btnAskAi && aiPromptInput) {
+    btnAskAi.addEventListener('click', () => {
+      const q = aiPromptInput.value.trim();
+      if (q) {
+        askAiCoach(q);
+        aiPromptInput.value = '';
+      }
+    });
+    aiPromptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        btnAskAi.click();
+      }
+    });
+  }
 
-    // Call server to save WAV evidence
-    try {
-      const res = await fetch('/api/pronunciation-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ testId, variantA: varA, variantB: varB })
+  // Test Buttons
+  if (testVoiceSkip) {
+    testVoiceSkip.addEventListener('click', () => {
+      handleSpokenCommand('SKIP_REST', 'skip rest');
+    });
+  }
+
+  if (testVoiceStop) {
+    testVoiceStop.addEventListener('click', () => {
+      handleSpokenCommand('PAUSE', 'I want to drink water', 'WATER');
+    });
+  }
+
+  if (copyLogsBtn) {
+    copyLogsBtn.addEventListener('click', () => {
+      const logs = logConsole ? logConsole.innerText : '';
+      navigator.clipboard.writeText(logs).then(() => {
+        logMessage('📋 Audit logs copied to clipboard!', 'success');
       });
-      const data = await res.json();
-      logMessage(`📊 [EVIDENCE] ${data.recommendation || 'WAV files recorded to /pronunciation_evidence'}`, 'success');
-    } catch (e) {
-      console.warn('Pronunciation test endpoint note:', e);
-    }
-  });
-});
+    });
+  }
 
-// Copy Evidence Log Button
-copyLogsBtn.addEventListener('click', () => {
-  const entries = Array.from(document.querySelectorAll('.log-entry')).map(e => e.textContent).join('\n');
-  navigator.clipboard.writeText(entries).then(() => {
-    logMessage('📋 Evidence log copied to clipboard for presentation!', 'success');
-  }).catch(() => {
-    logMessage('📋 Log ready for copying.', 'info');
-  });
-});
-
-clearLogsBtn.addEventListener('click', () => {
-  logConsole.innerHTML = '<div class="log-entry info">[System] Log cleared.</div>';
-});
+  if (clearLogsBtn && logConsole) {
+    clearLogsBtn.addEventListener('click', () => {
+      logConsole.innerHTML = '';
+      logMessage('[System] Logs cleared.', 'info');
+    });
+  }
+}
 
 // App Startup & Server Config Check
 async function initApp() {
@@ -719,191 +661,28 @@ async function initApp() {
   const config = await rimeClient.checkConfig();
 
   if (config.isRimeConfigured) {
-    engineStatusBadge.className = 'engine-status-badge';
-    engineText.textContent = `Rime.ai Connected (Coda - ${config.defaultSpeaker})`;
     logMessage(`✅ Connected to Rime.ai TTS Engine (Model: ${config.model}, Speaker: ${config.defaultSpeaker})`, 'success');
   } else {
-    engineStatusBadge.className = 'engine-status-badge warning';
-    engineText.textContent = `Local TTS Active (Add RIME_API_KEY for Rime)`;
-    logMessage('ℹ️ RIME_API_KEY is not yet added in .env. Falling back to high-speed local speech synthesis so you can test interruption immediately!', 'info');
+    logMessage('ℹ️ Local TTS Active (RIME_API_KEY in .env will upgrade to live Coda)', 'info');
   }
 
   if (config.isGeminiWeb2ApiLive) {
-    geminiStatusBadge.className = 'engine-status-badge purple';
-    geminiText.textContent = 'Gemini Web2API Connected (:8081)';
     logMessage('✅ Connected to gemini-web2api on port 8081 for unlimited AI intelligence!', 'success');
   } else {
-    geminiStatusBadge.className = 'engine-status-badge purple';
-    geminiText.textContent = 'AI Coach Brain Active';
-    logMessage('ℹ️ Local gemini-web2api server not detected on :8081. Using built-in athletic coach AI intelligence. (Run python gemini_web2api.py to activate full web2api).', 'info');
+    logMessage('ℹ️ Built-in athletic coach AI active.', 'info');
   }
 
   initWaveformVisualizer();
-  initCyberRoninAnimations();
-  initMicInteractions();
+  initVoiceChips();
+  initPronunciationLab();
+  initEvents();
 
-  // Initialize Clickable Conversational Voice Chips
-  const voiceChips = document.querySelectorAll('.voice-chip');
-  voiceChips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      const phrase = chip.getAttribute('data-speak') || chip.textContent.replace(/[()"]/g, '').trim();
-      logMessage(`👉 [VOICE CHIP] "${phrase}"`, 'user');
-      handleSpokenCommand('', phrase);
-    });
-  });
-
-  // Ensure Spline 3D Robot model is actively loaded without hanging
-  const spline = document.getElementById('spline-robot');
-  if (spline) {
-    const checkAndLoadSpline = () => {
-      if (typeof spline.load === 'function' && !spline.isLoaded) {
-        spline.load(spline.getAttribute('url')).catch(() => {});
-      }
-    };
-    checkAndLoadSpline();
-    setTimeout(checkAndLoadSpline, 600);
-    setTimeout(checkAndLoadSpline, 1500);
-  }
-}
-
-// =========================================================
-// 1. Cyber Ronin Cursor & Touch Spotlight Reveal
-// =========================================================
-const revealImg = document.getElementById('reveal-img');
-function updateSpotlight(clientX, clientY) {
-  if (!revealImg) return;
-  const rect = revealImg.getBoundingClientRect();
-  const x = clientX - rect.left;
-  const y = clientY - rect.top;
-  const width = window.innerWidth;
-  const r = width < 480 ? 120 : (width < 720 ? 160 : 260);
-  const gradient = `radial-gradient(circle ${r}px at ${x}px ${y}px, #fff 0%, #fff 40%, rgba(255,255,255,0.75) 60%, rgba(255,255,255,0.4) 75%, rgba(255,255,255,0.12) 88%, transparent 100%)`;
-  revealImg.style.webkitMaskImage = gradient;
-  revealImg.style.maskImage = gradient;
-}
-window.addEventListener('mousemove', (e) => updateSpotlight(e.clientX, e.clientY));
-window.addEventListener('touchmove', (e) => {
-  if (e.touches && e.touches[0]) updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
-}, { passive: true });
-
-// =========================================================
-// 2. Cyber Ronin Words Pull-Up & IntersectionObserver
-// =========================================================
-function initCyberRoninAnimations() {
-  const wordsPullUpEls = document.querySelectorAll('.words-pull-up');
-  wordsPullUpEls.forEach((el) => {
-    if (el.dataset.split) return;
-    el.dataset.split = 'true';
-    const isH1 = el.tagName.toLowerCase() === 'h1';
-    const directSpans = el.querySelectorAll(':scope > span');
-    if (isH1 && directSpans.length > 0) {
-      let continuousIndex = 0;
-      directSpans.forEach((span) => {
-        span.classList.add('pull-line');
-        const rawText = span.textContent.trim();
-        span.innerHTML = '';
-        const words = rawText.split(/\s+/);
-        words.forEach((word) => {
-          if (!word) return;
-          const wordSpan = document.createElement('span');
-          wordSpan.className = 'pull-word';
-          wordSpan.textContent = word;
-          wordSpan.style.animationDelay = `${continuousIndex * 0.1}s`;
-          span.appendChild(wordSpan);
-          continuousIndex++;
-        });
-      });
-    } else {
-      const rawTextSimple = el.textContent.trim();
-      el.innerHTML = '';
-      const wordsSimple = rawTextSimple.split(/\s+/);
-      wordsSimple.forEach((word, idx) => {
-        if (!word) return;
-        const wordSpan = document.createElement('span');
-        wordSpan.className = 'pull-word';
-        wordSpan.textContent = word;
-        wordSpan.style.animationDelay = `${idx * 0.1}s`;
-        el.appendChild(wordSpan);
-      });
-    }
-  });
-
-  if ('IntersectionObserver' in window) {
-    const wordsObserver = new IntersectionObserver((entries, obs) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('words-visible');
-          obs.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.2 });
-    wordsPullUpEls.forEach((el) => wordsObserver.observe(el));
-
-    const fadeEls = document.querySelectorAll('.fade-up-reveal');
-    const fadeObserver = new IntersectionObserver((entries, obs) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const delay = entry.target.getAttribute('data-delay') || '0';
-          entry.target.style.animationDelay = `${delay}s`;
-          entry.target.classList.add('is-visible');
-          obs.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.15 });
-    fadeEls.forEach((el) => fadeObserver.observe(el));
-  } else {
-    wordsPullUpEls.forEach((el) => el.classList.add('words-visible'));
-    document.querySelectorAll('.fade-up-reveal').forEach((el) => {
-      const delay = el.getAttribute('data-delay') || '0';
-      el.style.animationDelay = `${delay}s`;
-      el.classList.add('is-visible');
-    });
-  }
-}
-
-// =========================================================
-// 3. Hands-Free Mic Controls & Auto-Gesture Activation
-// =========================================================
-function initMicInteractions() {
-  const btnMicToggle = document.getElementById('btn-mic-toggle');
-  if (btnMicToggle) {
-    btnMicToggle.addEventListener('click', () => {
-      soundFx.init();
-      audioController.initAudioContext();
-      voiceListener.toggle();
-    });
-  }
-
-  // Auto-start microphone on first user gesture anywhere
-  function autoStartMic() {
-    soundFx.init();
-    audioController.initAudioContext();
-    if (!voiceListener.isListening) {
+  // Auto-start microphone on user interaction
+  document.body.addEventListener('click', () => {
+    if (!voiceListener.isListening && voiceListener.hasSupport) {
       voiceListener.start();
     }
-  }
-  window.addEventListener('click', autoStartMic, { once: true });
-  window.addEventListener('touchstart', autoStartMic, { once: true });
+  }, { once: true });
 }
 
-// =========================================================
-// 4. Clean Spline Watermark / Logo Remover
-// =========================================================
-function hideSplineLogo() {
-  const viewer = document.getElementById('spline-robot');
-  if (viewer && viewer.shadowRoot) {
-    const logo = viewer.shadowRoot.querySelector('#logo') || 
-                 viewer.shadowRoot.querySelector('a[href*="spline.design"]') ||
-                 viewer.shadowRoot.querySelector('.spline-watermark');
-    if (logo) {
-      logo.style.display = 'none';
-      logo.style.opacity = '0';
-      logo.style.visibility = 'hidden';
-      logo.style.pointerEvents = 'none';
-      try { logo.remove(); } catch(e) {}
-    }
-  }
-}
-setInterval(hideSplineLogo, 120);
-
-initApp();
+window.addEventListener('DOMContentLoaded', initApp);

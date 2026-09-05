@@ -94,13 +94,16 @@ export class WorkoutStateMachine {
   }
 
   getContext() {
+    const ex = this.currentExercise || {};
     return {
       state: this.state,
-      exercise: this.currentExercise,
+      exercise: ex,
       set: this.currentSet,
+      totalSets: ex.sets || 3,
       rep: this.currentRep,
+      targetReps: ex.reps || 8,
       restRemaining: this.restTimeRemaining,
-      totalRest: this.totalRestTime
+      totalRest: this.totalRestTime || ex.restSeconds || 30
     };
   }
 
