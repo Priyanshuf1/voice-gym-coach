@@ -89,6 +89,86 @@ const audioController = new AudioController(
   }
 );
 
+// Robot Action Controller Elements
+const robotContainer = document.getElementById('robot-container');
+const robotWrapper = document.getElementById('robot-wrapper');
+const robotAura = document.getElementById('robot-aura');
+const robotActionText = document.getElementById('robot-action-text');
+const robotExerciseIndicator = document.getElementById('robot-exercise-indicator');
+
+function resetRobotAnimations() {
+  if (!robotWrapper) return;
+  robotWrapper.classList.remove(
+    'action-pushup-rep',
+    'action-squat-rep',
+    'action-jump-rep',
+    'action-plank-hold',
+    'action-rest-breathe',
+    'action-interrupted',
+    'action-victory',
+    'action-countdown'
+  );
+}
+
+function updateRobotAction(actionType, text, exerciseName = '') {
+  if (!robotWrapper) return;
+
+  if (robotExerciseIndicator && exerciseName) {
+    robotExerciseIndicator.textContent = exerciseName;
+  }
+
+  if (robotActionText && text) {
+    robotActionText.textContent = text;
+  }
+
+  if (robotAura) {
+    robotAura.className = 'robot-aura';
+    if (actionType && actionType.includes('pushup')) robotAura.classList.add('aura-pushup');
+    else if (actionType && actionType.includes('squat')) robotAura.classList.add('aura-squat');
+    else if (actionType && actionType.includes('rest')) robotAura.classList.add('aura-rest');
+    else if (actionType && actionType.includes('victory')) robotAura.classList.add('aura-victory');
+  }
+
+  resetRobotAnimations();
+  void robotWrapper.offsetWidth; // Trigger reflow
+
+  if (actionType) {
+    robotWrapper.classList.add(actionType);
+  }
+}
+
+function triggerRobotRepAction(exerciseName, repNumber) {
+  if (!robotWrapper) return;
+  const ex = (exerciseName || '').toLowerCase();
+  const pacingSec = (stateMachine.repPacingMs / 1000).toFixed(2);
+  robotWrapper.style.setProperty('--pacing-duration', `${pacingSec}s`);
+
+  if (ex.includes('push') || ex.includes('chest') || ex.includes('press')) {
+    updateRobotAction('action-pushup-rep', `Push-Up Rep ${repNumber}`, exerciseName);
+  } else if (ex.includes('squat') || ex.includes('lunge') || ex.includes('leg')) {
+    updateRobotAction('action-squat-rep', `Squat Rep ${repNumber}`, exerciseName);
+  } else if (ex.includes('jump') || ex.includes('jack') || ex.includes('burpee')) {
+    updateRobotAction('action-jump-rep', `Jump Rep ${repNumber}`, exerciseName);
+  } else if (ex.includes('plank') || ex.includes('hold')) {
+    updateRobotAction('action-plank-hold', `Plank Hold (Rep ${repNumber})`, exerciseName);
+  } else {
+    updateRobotAction('action-squat-rep', `Rep ${repNumber}`, exerciseName);
+  }
+}
+
+function triggerRobotBargeIn() {
+  if (!robotWrapper) return;
+  resetRobotAnimations();
+  void robotWrapper.offsetWidth;
+  robotWrapper.classList.add('action-interrupted');
+  if (robotActionText) robotActionText.textContent = '⚡ Barge-In Halt!';
+  setTimeout(() => {
+    if (robotWrapper && robotWrapper.classList.contains('action-interrupted')) {
+      robotWrapper.classList.remove('action-interrupted');
+    }
+  }, 380);
+}
+
 // 3. Initialize State Machine
 const stateMachine = new WorkoutStateMachine({
   audioController,
@@ -101,12 +181,17 @@ const stateMachine = new WorkoutStateMachine({
     hudLabelEl.textContent = 'SEC REST';
     const fraction = remaining / total;
     circleProgressEl.style.strokeDashoffset = `${CIRCLE_CIRCUMFERENCE * (1 - fraction)}`;
+    if (robotActionText) robotActionText.textContent = `Rest & Breathe (${remaining}s)`;
   },
   onRep: (currentRep, targetReps) => {
     hudNumberEl.textContent = `${currentRep}`;
     hudLabelEl.textContent = `OF ${targetReps} REPS`;
     const fraction = currentRep / targetReps;
     circleProgressEl.style.strokeDashoffset = `${CIRCLE_CIRCUMFERENCE * (1 - fraction)}`;
+    
+    // Animate Robot to match the exercise rep motion
+    const exName = stateMachine.currentExercise ? stateMachine.currentExercise.name : 'Rep';
+    triggerRobotRepAction(exName, currentRep);
   },
   onLog: (msg, type) => {
     logMessage(msg, type);
@@ -129,6 +214,7 @@ function updateHUDState(state, ctx) {
     circleProgressEl.style.strokeDashoffset = '0';
     exerciseNameEl.textContent = ctx.exercise.name;
     workoutTargetEl.textContent = `Target: ${ctx.exercise.reps} Reps • ${ctx.exercise.restSeconds}s Rest`;
+    updateRobotAction('', 'Coach Standing By', 'Ready');
   } else if (state === STATES.COUNTDOWN) {
     stateBadge.textContent = 'COUNTDOWN';
     stateBadge.classList.add('active-workout');
@@ -136,6 +222,7 @@ function updateHUDState(state, ctx) {
     btnIcon.textContent = '⏸';
     btnToggleWorkout.classList.add('btn-pause');
     btnSkipRest.style.display = 'none';
+    updateRobotAction('action-countdown', 'Get In Position!', ctx.exercise.name);
   } else if (state === STATES.EXERCISE_REPS) {
     stateBadge.textContent = 'SET IN PROGRESS';
     stateBadge.classList.add('active-workout');
@@ -146,6 +233,7 @@ function updateHUDState(state, ctx) {
     btnIcon.textContent = '⏸';
     btnToggleWorkout.classList.add('btn-pause');
     btnSkipRest.style.display = 'none';
+    updateRobotAction('', `Set ${ctx.set}: Ready for Rep 1`, ctx.exercise.name);
   } else if (state === STATES.REST_TIMER) {
     stateBadge.textContent = 'REST PERIOD';
     stateBadge.classList.add('active-rest');
@@ -153,11 +241,13 @@ function updateHUDState(state, ctx) {
     btnSkipRest.style.display = 'inline-block';
     hudNumberEl.textContent = `${ctx.restRemaining}`;
     hudLabelEl.textContent = 'SEC REST';
+    updateRobotAction('action-rest-breathe', `Rest & Recovery (${ctx.restRemaining}s)`, 'Rest');
   } else if (state === STATES.PAUSED) {
     stateBadge.textContent = 'PAUSED';
     btnLabel.textContent = 'RESUME WORKOUT';
     btnIcon.textContent = '▶';
     btnToggleWorkout.classList.remove('btn-pause');
+    updateRobotAction('', 'Workout Paused (Holding)', 'Paused');
   } else if (state === STATES.COMPLETED) {
     stateBadge.textContent = 'COMPLETED';
     stateBadge.classList.add('active-workout');
@@ -165,6 +255,7 @@ function updateHUDState(state, ctx) {
     btnIcon.textContent = '🔄';
     btnToggleWorkout.classList.remove('btn-pause');
     btnSkipRest.style.display = 'none';
+    updateRobotAction('action-victory', 'Workout Crushed! 🏆', 'Champion');
   }
 }
 
@@ -214,6 +305,9 @@ function triggerBargeIn(reason) {
   // Flash state tag on screen
   stateBadge.classList.add('interrupted');
   setTimeout(() => stateBadge.classList.remove('interrupted'), 400);
+
+  // Trigger 3D robot reaction
+  triggerRobotBargeIn();
 
   // Play glitch sound effect and cut audio
   soundFx.playBargeInGlitch();

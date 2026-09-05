@@ -62,9 +62,19 @@
       </div>
     </div>
 
-    <!-- Interactive 3D Robot Experience -->
-    <div class="hero-robot-container">
-      <spline-viewer id="spline-robot" loading-anim-type="spinner-small-dark" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
+    <!-- Interactive 3D Robot Experience with Real-Time Workout Actions -->
+    <div class="hero-robot-container" id="robot-container">
+      <div id="robot-aura" class="robot-aura"></div>
+      <div class="robot-status-overlay">
+        <div id="robot-action-badge" class="robot-action-badge">
+          <span class="robot-action-dot"></span>
+          <span id="robot-action-text">Coach Standing By</span>
+        </div>
+        <div id="robot-exercise-indicator" class="robot-exercise-tag">Idle</div>
+      </div>
+      <div class="robot-viewer-wrapper" id="robot-wrapper">
+        <spline-viewer id="spline-robot" loading-anim-type="spinner-small-dark" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
+      </div>
     </div>
   </section>
 

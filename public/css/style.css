@@ -278,35 +278,209 @@ body {
   background: #f8fafc;
 }
 
-/* 3D Robot Container */
+/* 3D Robot Container with Dynamic Workout Action Animations */
 .hero-robot-container {
   position: relative;
   width: 100%;
   height: 250px;
-  background: radial-gradient(circle at center, rgba(124, 58, 237, 0.08) 0%, rgba(2, 132, 199, 0.05) 50%, transparent 80%);
+  background: #ffffff;
   border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: var(--panel-shadow);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.07);
 }
 
-.robot-3d-wrapper {
+.robot-aura {
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(124, 58, 237, 0.12) 0%, rgba(2, 132, 199, 0.06) 45%, transparent 70%);
+  transition: all 0.5s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.robot-aura.aura-pushup {
+  background: radial-gradient(circle at center, rgba(225, 29, 72, 0.16) 0%, rgba(249, 115, 22, 0.08) 50%, transparent 70%);
+}
+
+.robot-aura.aura-squat {
+  background: radial-gradient(circle at center, rgba(124, 58, 237, 0.18) 0%, rgba(79, 70, 229, 0.08) 50%, transparent 70%);
+}
+
+.robot-aura.aura-rest {
+  background: radial-gradient(circle at center, rgba(6, 182, 212, 0.16) 0%, rgba(14, 165, 233, 0.08) 50%, transparent 70%);
+}
+
+.robot-aura.aura-victory {
+  background: radial-gradient(circle at center, rgba(234, 179, 8, 0.22) 0%, rgba(245, 158, 11, 0.1) 50%, transparent 70%);
+}
+
+.robot-status-overlay {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.robot-action-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-headline);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.robot-action-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--primary-purple);
+  box-shadow: 0 0 6px var(--primary-purple);
+  animation: pulseDot 1.5s infinite ease-in-out;
+}
+
+.robot-exercise-tag {
+  background: rgba(241, 245, 249, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-body);
+}
+
+.robot-viewer-wrapper {
   width: 100%;
   height: 100%;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
+  transform-origin: center bottom;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.spline-frame {
+#spline-robot {
   width: 100%;
   height: 100%;
-  border: none;
-  border-radius: 20px;
+  display: block;
+}
+
+/* =========================================================
+   ROBOT WORKOUT ACTIONS KEYFRAMES & UTILITIES
+   ========================================================= */
+
+/* 1. Push-up Rep Action */
+.robot-viewer-wrapper.action-pushup-rep {
+  animation: robotPushupCycle var(--pacing-duration, 1.8s) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes robotPushupCycle {
+  0% { transform: perspective(800px) rotateX(0deg) translateY(0) scale(1); }
+  40% { transform: perspective(800px) rotateX(28deg) translateY(32px) scale(0.9); }
+  60% { transform: perspective(800px) rotateX(28deg) translateY(32px) scale(0.9); }
+  100% { transform: perspective(800px) rotateX(0deg) translateY(0) scale(1); }
+}
+
+/* 2. Squat Rep Action */
+.robot-viewer-wrapper.action-squat-rep {
+  animation: robotSquatCycle var(--pacing-duration, 2.2s) cubic-bezier(0.3, 0, 0.2, 1);
+}
+
+@keyframes robotSquatCycle {
+  0% { transform: translateY(0) scaleX(1) scaleY(1); }
+  45% { transform: translateY(38px) scaleX(1.14) scaleY(0.78); }
+  65% { transform: translateY(38px) scaleX(1.14) scaleY(0.78); }
+  100% { transform: translateY(0) scaleX(1) scaleY(1); }
+}
+
+/* 3. Jumping Jacks / Dynamic Rep Action */
+.robot-viewer-wrapper.action-jump-rep {
+  animation: robotJumpCycle var(--pacing-duration, 1.6s) ease-out;
+}
+
+@keyframes robotJumpCycle {
+  0% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-28px) scale(1.08) rotate(-1.5deg); }
+  55% { transform: translateY(-28px) scale(1.08) rotate(1.5deg); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* 4. Plank / Isometric Hold */
+.robot-viewer-wrapper.action-plank-hold {
+  transform: perspective(800px) rotateX(24deg) translateY(20px) scale(0.94);
+  animation: robotPlankJitter 2s infinite ease-in-out;
+}
+
+@keyframes robotPlankJitter {
+  0%, 100% { transform: perspective(800px) rotateX(24deg) translateY(20px) scale(0.94); }
+  50% { transform: perspective(800px) rotateX(24.5deg) translateY(21px) scale(0.938); }
+}
+
+/* 5. Rest Timer Breathing */
+.robot-viewer-wrapper.action-rest-breathe {
+  animation: robotBreathe 2.8s infinite ease-in-out;
+}
+
+@keyframes robotBreathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-10px) scale(1.05); }
+}
+
+/* 6. Barge-in Glitch Interrupt */
+.robot-viewer-wrapper.action-interrupted {
+  animation: robotGlitchShake 0.35s ease-out;
+}
+
+@keyframes robotGlitchShake {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-5px, 3px) rotate(-2deg); }
+  40% { transform: translate(5px, -3px) rotate(2deg); }
+  60% { transform: translate(-3px, 2px) rotate(-1deg); }
+  80% { transform: translate(3px, -1px) rotate(1deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+/* 7. Workout Complete Victory Pump */
+.robot-viewer-wrapper.action-victory {
+  animation: robotVictoryJump 1.2s infinite ease-in-out;
+}
+
+@keyframes robotVictoryJump {
+  0%, 100% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-30px) scale(1.1) rotate(-3deg); }
+  65% { transform: translateY(-30px) scale(1.1) rotate(3deg); }
+}
+
+/* 8. Countdown Anticipation Pulse */
+.robot-viewer-wrapper.action-countdown {
+  animation: robotCountdownPump 0.9s infinite ease-in-out;
+}
+
+@keyframes robotCountdownPump {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
 }
 
 /* Main Container */
