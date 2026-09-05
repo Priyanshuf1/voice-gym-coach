@@ -1,18 +1,24 @@
 /**
  * exerciseVisualizer.js
- * Real-time Athletic Biomechanics & Exercise Form Demonstration Stage
+ * Virtual Workout Form Demonstration & Biomechanics Video Player
  * 
  * Features:
- * - High-definition animated SVG & Canvas athlete performing active exercises in real time:
- *   • Push-ups (Full depth, 90° elbow tuck, neutral spine)
- *   • Squats (Hips back, 90° parallel depth, knee tracking)
- *   • Mountain Climbers (Alternating rapid knee drive)
- *   • Plank Hold (Isometric core tension pulses & alignment line)
- *   • Rest & Water Break (Athlete drinking water from shaker, breathing recovery curve)
+ * - High-definition 60 FPS animated biomechanical avatar for all 8+ exercises:
+ *   • Push-ups (Standard, Wide, Tempo)
+ *   • Diamond Push-ups (Triceps isolation, diamond hands under sternum)
+ *   • Bench / Chair Dips (Triceps lockout, 90° elbow depth)
+ *   • Bodyweight Squats & Squat Pulses (Parallel depth, knee tracking)
+ *   • Alternating Lunges (90° knee angles, upright torso)
+ *   • Forearm Plank & Core Holds (Spine alignment, abdominal brace)
+ *   • Mountain Climbers (Rapid knee drive cadence)
+ *   • Pike Push-ups (Shoulder deltoid press, inverted V)
+ *   • Rest & Water Break (Athlete drinking water from bottle, heart rate & timer telemetry)
  *   • Paused / Holding (Standby state)
- * - Biomechanical angle markers & depth indicators
- * - Live synchronization with WorkoutStateMachine (rep pacing, rest timer, pause)
- * - View mode switcher (Biomechanics Demo, Robot Mascot, or Dual Split)
+ *   • Workout Completed (Champion victory pose)
+ * - Mode Switcher:
+ *   • ⚡ 60 FPS Kinetic Simulation (Real-time joint angles, depth guidelines, muscle glow)
+ *   • 🎥 Video / Tutorial Masterclass (Biomechanical form breakdown, common errors, setup)
+ * - Synchronized live with WorkoutStateMachine rep pacing and states.
  */
 
 export class ExerciseVisualizer {
@@ -22,10 +28,9 @@ export class ExerciseVisualizer {
 
     this.options = options;
     this.currentExercise = 'pushups';
-    this.state = 'IDLE'; // IDLE, EXERCISE_REPS, REST_TIMER, PAUSED, COMPLETED
+    this.state = 'IDLE'; // IDLE, COUNTDOWN, EXERCISE_REPS, REST_TIMER, PAUSED, COMPLETED
     this.currentRep = 0;
     this.targetReps = 8;
-    this.repProgress = 0;
     this.restRemaining = 30;
     this.totalRest = 30;
     this.pacingMs = 2200;
@@ -33,7 +38,7 @@ export class ExerciseVisualizer {
     this.rafId = null;
     this.lastTime = performance.now();
     this.animTime = 0;
-    this.mode = 'demo'; // 'demo' | 'robot' | 'dual'
+    this.mode = 'simulation'; // 'simulation' | 'tutorial'
 
     this.init();
   }
@@ -46,43 +51,31 @@ export class ExerciseVisualizer {
 
   renderContainer() {
     this.container.innerHTML = `
-      <div class="visualizer-stage-root" id="visualizer-stage-root">
-        <!-- Stage Top Navigation Bar (Mode Switcher & Biometrics Badge) -->
-        <div class="stage-nav-bar">
-          <div class="stage-mode-switcher">
-            <button class="stage-mode-btn active" data-mode="demo" id="btn-mode-demo">
-              🏋️ Biomechanics Demo
-            </button>
-            <button class="stage-mode-btn" data-mode="robot" id="btn-mode-robot">
-              🦾 Cyber Mascot
-            </button>
-            <button class="stage-mode-btn" data-mode="dual" id="btn-mode-dual">
-              ⚡ Dual View
-            </button>
+      <div class="visualizer-demo-card" id="visualizer-demo-card">
+        <!-- Stage Top Bar: Exercise Header & Mode Toggle -->
+        <div class="demo-card-header">
+          <div class="demo-title-group">
+            <span class="demo-pill-live" id="demo-live-badge">FORM COACH ACTIVE</span>
+            <h3 class="demo-exercise-name" id="demo-exercise-name">Push-Ups</h3>
           </div>
 
-          <div class="stage-telemetry-badge" id="stage-telemetry-badge">
-            <span class="telemetry-dot"></span>
-            <span id="telemetry-text">Kinetic Form Tracking • 60 FPS</span>
+          <div class="demo-mode-switcher">
+            <button class="demo-mode-btn active" data-mode="simulation" id="btn-mode-sim">
+              ⚡ Kinetic 60 FPS
+            </button>
+            <button class="demo-mode-btn" data-mode="tutorial" id="btn-mode-tut">
+              🎥 Video Masterclass
+            </button>
           </div>
         </div>
 
-        <!-- Main Visual Stage Arena -->
-        <div class="stage-arena mode-demo" id="stage-arena">
+        <!-- Stage Main Canvas & Video Area -->
+        <div class="demo-stage-arena" id="demo-stage-arena">
           
-          <!-- 1. Biomechanics Exercise Animation Pane -->
-          <div class="stage-pane pane-exercise" id="pane-exercise">
-            <div class="exercise-hud-overlay">
-              <div class="hud-tag-group">
-                <span class="hud-pill live-pill" id="exercise-live-badge">DEMO ACTIVE</span>
-                <span class="hud-pill form-pill" id="exercise-form-cue">ELBOWS 45° TUCKED</span>
-              </div>
-              <div class="hud-rep-pace" id="hud-rep-pace">Pacing: 2.2s / rep</div>
-            </div>
-
-            <!-- SVG Biomechanics Avatar -->
-            <div class="athlete-svg-wrapper" id="athlete-svg-wrapper">
-              <svg class="athlete-canvas" id="athlete-svg" viewBox="0 0 500 360" xmlns="http://www.w3.org/2000/svg">
+          <!-- Mode 1: 60 FPS Kinetic Simulation Canvas / SVG -->
+          <div class="demo-view-pane view-simulation" id="view-simulation">
+            <div class="sim-svg-wrapper">
+              <svg class="sim-svg" id="sim-svg" viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <linearGradient id="skinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#D4A373"/>
@@ -92,195 +85,111 @@ export class ExerciseVisualizer {
                     <stop offset="0%" stop-color="#2D3142"/>
                     <stop offset="100%" stop-color="#181A20"/>
                   </linearGradient>
-                  <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <linearGradient id="goldGlow" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stop-color="#E07A5F"/>
                     <stop offset="100%" stop-color="#F4A261"/>
                   </linearGradient>
+                  <filter id="simGlow">
+                    <feGaussianBlur stdDeviation="3" result="blur"/>
+                    <feMerge>
+                      <feMergeNode in="blur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
                 </defs>
 
-                <!-- Ground / Mat Line -->
-                <line x1="40" y1="300" x2="460" y2="300" stroke="#D4A373" stroke-width="3" stroke-linecap="round" stroke-opacity="0.35"/>
-                <line x1="80" y1="300" x2="420" y2="300" stroke="#2A9D8F" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6"/>
+                <!-- Ground Floor Guide -->
+                <line x1="40" y1="280" x2="460" y2="280" stroke="#D4A373" stroke-width="2" stroke-linecap="round" stroke-opacity="0.3"/>
+                <line x1="80" y1="280" x2="420" y2="280" stroke="#2A9D8F" stroke-width="2" stroke-linecap="round" stroke-opacity="0.5"/>
 
-                <!-- Dynamic Exercise Figure Layer (Rendered procedurally) -->
-                <g id="figure-dynamic-layer"></g>
+                <!-- Dynamic Exercise Figure Layer -->
+                <g id="fig-dynamic-layer"></g>
 
-                <!-- Dynamic Biomechanics Readout Overlay Layer -->
-                <g id="telemetry-dynamic-layer"></g>
+                <!-- Dynamic Telemetry Readout Overlay Layer -->
+                <g id="tel-dynamic-layer"></g>
               </svg>
-            </div>
-
-            <!-- Bottom Exercise Form Cue Bar -->
-            <div class="exercise-footer-cues" id="exercise-footer-cues">
-              <div class="form-cue-card">
-                <span class="cue-label">PRIMARY TARGET</span>
-                <span class="cue-value" id="cue-primary">Pectorals & Triceps</span>
-              </div>
-              <div class="form-cue-card">
-                <span class="cue-label">BIOMECHANICAL RULE</span>
-                <span class="cue-value" id="cue-rule">Chest touches floor • Glutes squeezed</span>
-              </div>
-              <div class="form-cue-card">
-                <span class="cue-label">CURRENT TEMPO</span>
-                <span class="cue-value" id="cue-tempo">2s Down • 1s Up</span>
-              </div>
             </div>
           </div>
 
-          <!-- 2. Mascot Pane (Rabto Cyber Coach + Speech & Hearing Interface) -->
-          <div class="stage-pane pane-mascot" id="pane-mascot">
-            <!-- Neural Ear Sensor (Direct Robot Hearing Attached) -->
-            <div class="robot-ear-hud" id="stage-robot-ear-hud">
-              <div class="ear-hud-header">
-                <div class="ear-live-indicator">
-                  <span class="ear-pulse-dot" id="stage-ear-pulse-dot"></span>
-                  <span class="ear-hud-title" id="stage-mic-indicator">EAR SENSOR • ACTIVE</span>
-                </div>
-                <span class="ear-audio-tag">&lt;1ms Cutoff</span>
-              </div>
-              <div class="ear-speech-body">
-                <div id="stage-heard-transcript" class="ear-speech-text">Listening for speech...</div>
-              </div>
-            </div>
-
-            <!-- Real-Time Vocalizer Mouth (Coach Speech Attached) -->
-            <div class="robot-speech-hud" id="stage-robot-speech-hud">
-              <div class="speech-hud-header">
-                <div class="speech-live-indicator">
-                  <span class="speech-live-dot"></span>
-                  <span class="speech-hud-title" id="stage-speech-hud-title">COACH CELESTE • READY</span>
-                </div>
-                <div class="speech-eq-bars" id="stage-speech-eq-bars">
-                  <span></span><span></span><span></span><span></span><span></span>
-                </div>
-              </div>
-              <div class="speech-bubble-body">
-                <p id="stage-coach-subtitle" class="coach-speech-text">"Say 'Start' or ask anything about your workout to begin!"</p>
-              </div>
-            </div>
-
-            <!-- Mascot SVG Robot -->
-            <div class="mascot-interactive-area" id="mascot-interactive-area">
-              <div class="cyber-coach-mascot-inner" id="cyber-mascot-graphic"></div>
+          <!-- Mode 2: Video & Form Masterclass Breakdown -->
+          <div class="demo-view-pane view-tutorial" id="view-tutorial" style="display: none;">
+            <div class="tutorial-card-body" id="tutorial-card-body">
+              <!-- Dynamically populated per exercise -->
             </div>
           </div>
 
         </div>
+
+        <!-- Stage Bottom Telemetry & Form Cues -->
+        <div class="demo-footer-cues" id="demo-footer-cues">
+          <div class="cue-box">
+            <span class="cue-box-label">PRIMARY TARGET</span>
+            <span class="cue-box-val" id="cue-val-target">Pectorals & Triceps</span>
+          </div>
+          <div class="cue-box">
+            <span class="cue-box-label">BIOMECHANICAL RULE</span>
+            <span class="cue-box-val" id="cue-val-rule">Elbows 45° • Chest touch floor</span>
+          </div>
+          <div class="cue-box">
+            <span class="cue-box-label">BREATHING RHYTHM</span>
+            <span class="cue-box-val" id="cue-val-breath">↘ Inhale Down • ↗ Exhale Up</span>
+          </div>
+        </div>
       </div>
     `;
 
-    this.renderRobotMascotSVG();
-    this.updateExerciseCues();
-  }
-
-  renderRobotMascotSVG() {
-    const el = document.getElementById('cyber-mascot-graphic');
-    if (!el) return;
-    el.innerHTML = `
-      <svg class="coach-svg" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="rBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#2D3142"/>
-            <stop offset="50%" stop-color="#181A20"/>
-            <stop offset="100%" stop-color="#0E1015"/>
-          </linearGradient>
-          <linearGradient id="rGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#D4A373"/>
-            <stop offset="100%" stop-color="#B07D48"/>
-          </linearGradient>
-          <radialGradient id="rCoreGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#E07A5F" stop-opacity="0.95"/>
-            <stop offset="50%" stop-color="#D4A373" stop-opacity="0.4"/>
-            <stop offset="100%" stop-color="#E07A5F" stop-opacity="0"/>
-          </radialGradient>
-        </defs>
-        
-        <!-- Torso & Athletic Chest Plate -->
-        <path d="M68 170 L172 170 L198 240 L42 240 Z" fill="url(#rBodyGrad)" stroke="#D4A373" stroke-width="2" stroke-opacity="0.3"/>
-        <path d="M85 175 L155 175 L165 210 L75 210 Z" fill="#14151B" stroke="rgba(212,163,115,0.2)" stroke-width="1.5"/>
-        
-        <!-- Cyber Core Reactor -->
-        <circle cx="120" cy="192" r="14" fill="#0C0E12" stroke="#E07A5F" stroke-width="1.5"/>
-        <circle cx="120" cy="192" r="9" fill="url(#rCoreGlow)" class="core-pulse-circle"/>
-        <circle cx="120" cy="192" r="3" fill="#FFF"/>
-        
-        <!-- Neck Hydraulic Pivot -->
-        <rect x="110" y="142" width="20" height="28" rx="4" fill="url(#rGoldGrad)" stroke="#181A20" stroke-width="1"/>
-        
-        <!-- Head & Helmet Assembly -->
-        <g class="robot-head-group">
-          <path d="M75 90 C75 48, 165 48, 165 90 C165 125, 145 145, 120 145 C95 145, 75 125, 75 90 Z" fill="url(#rBodyGrad)" stroke="#D4A373" stroke-width="2" stroke-opacity="0.4"/>
-          <path d="M90 58 L150 58 L158 78 L82 78 Z" fill="url(#rGoldGrad)" opacity="0.35"/>
-          
-          <!-- Visor & Optical Sensor -->
-          <rect x="85" y="86" width="70" height="18" rx="9" fill="#08090C" stroke="#E07A5F" stroke-width="1.5"/>
-          <path d="M92 95 L148 95" stroke="#E07A5F" stroke-width="4" stroke-linecap="round" class="visor-scan-beam"/>
-          <circle cx="120" cy="95" r="4" fill="#FFFFFF" class="visor-pupil"/>
-          
-          <!-- Speaker Grille Mouth -->
-          <g class="mouth-speaker-grille">
-            <rect x="103" y="118" width="34" height="14" rx="7" fill="#050608" stroke="rgba(212,163,115,0.3)" stroke-width="1"/>
-            <line x1="109" y1="125" x2="113" y2="125" stroke="#E07A5F" stroke-width="2.5" stroke-linecap="round" class="mouth-bar bar-1"/>
-            <line x1="116" y1="125" x2="124" y2="125" stroke="#D4A373" stroke-width="2.5" stroke-linecap="round" class="mouth-bar bar-2"/>
-            <line x1="127" y1="125" x2="131" y2="125" stroke="#E07A5F" stroke-width="2.5" stroke-linecap="round" class="mouth-bar bar-3"/>
-          </g>
-          
-          <!-- Ear Sensors -->
-          <path d="M72 82 L64 75 L64 105 L72 100 Z" fill="url(#rGoldGrad)" stroke="#181A20" stroke-width="1"/>
-          <circle cx="68" cy="90" r="3" fill="#2A9D8F"/>
-          <path d="M168 82 L176 75 L176 105 L168 100 Z" fill="url(#rGoldGrad)" stroke="#181A20" stroke-width="1"/>
-          <circle cx="172" cy="90" r="3" fill="#2A9D8F"/>
-        </g>
-      </svg>
-    `;
+    this.updateExerciseDetails();
   }
 
   bindControls() {
-    const btnDemo = document.getElementById('btn-mode-demo');
-    const btnRobot = document.getElementById('btn-mode-robot');
-    const btnDual = document.getElementById('btn-mode-dual');
+    const btnSim = document.getElementById('btn-mode-sim');
+    const btnTut = document.getElementById('btn-mode-tut');
 
-    if (btnDemo) {
-      btnDemo.addEventListener('click', () => {
-        this.mode = 'demo';
+    if (btnSim) {
+      btnSim.addEventListener('click', () => {
+        this.mode = 'simulation';
         this.updateModeUI();
       });
     }
 
-    if (btnRobot) {
-      btnRobot.addEventListener('click', () => {
-        this.mode = 'robot';
-        this.updateModeUI();
-      });
-    }
-
-    if (btnDual) {
-      btnDual.addEventListener('click', () => {
-        this.mode = 'dual';
+    if (btnTut) {
+      btnTut.addEventListener('click', () => {
+        this.mode = 'tutorial';
         this.updateModeUI();
       });
     }
   }
 
   updateModeUI() {
-    const arena = document.getElementById('stage-arena');
-    const btnDemo = document.getElementById('btn-mode-demo');
-    const btnRobot = document.getElementById('btn-mode-robot');
-    const btnDual = document.getElementById('btn-mode-dual');
+    const btnSim = document.getElementById('btn-mode-sim');
+    const btnTut = document.getElementById('btn-mode-tut');
+    const viewSim = document.getElementById('view-simulation');
+    const viewTut = document.getElementById('view-tutorial');
 
-    [btnDemo, btnRobot, btnDual].forEach(b => b && b.classList.remove('active'));
-    if (arena) {
-      arena.className = `stage-arena mode-${this.mode}`;
+    if (this.mode === 'simulation') {
+      if (btnSim) btnSim.classList.add('active');
+      if (btnTut) btnTut.classList.remove('active');
+      if (viewSim) viewSim.style.display = 'block';
+      if (viewTut) viewTut.style.display = 'none';
+    } else {
+      if (btnSim) btnSim.classList.remove('active');
+      if (btnTut) btnTut.classList.add('active');
+      if (viewSim) viewSim.style.display = 'none';
+      if (viewTut) viewTut.style.display = 'block';
+      this.renderTutorialCard();
     }
-
-    if (this.mode === 'demo' && btnDemo) btnDemo.classList.add('active');
-    else if (this.mode === 'robot' && btnRobot) btnRobot.classList.add('active');
-    else if (this.mode === 'dual' && btnDual) btnDual.classList.add('active');
   }
 
-  setExercise(exerciseId) {
+  setExercise(exerciseId, exerciseName = '') {
     this.currentExercise = (exerciseId || 'pushups').toLowerCase();
-    this.updateExerciseCues();
+    const titleEl = document.getElementById('demo-exercise-name');
+    if (titleEl && exerciseName) {
+      titleEl.textContent = exerciseName;
+    }
+    this.updateExerciseDetails();
+    if (this.mode === 'tutorial') {
+      this.renderTutorialCard();
+    }
   }
 
   setState(state, rep = 0, targetReps = 8, restRemaining = 30, totalRest = 30) {
@@ -290,60 +199,207 @@ export class ExerciseVisualizer {
     this.restRemaining = restRemaining;
     this.totalRest = totalRest;
 
-    const liveBadge = document.getElementById('exercise-live-badge');
-    if (liveBadge) {
+    const badge = document.getElementById('demo-live-badge');
+    if (badge) {
       if (state === 'EXERCISE_REPS') {
-        liveBadge.textContent = `SET ACTIVE • REP ${rep}/${targetReps}`;
-        liveBadge.className = 'hud-pill live-pill active';
+        badge.textContent = `SET ACTIVE • REP ${rep}/${targetReps}`;
+        badge.className = 'demo-pill-live active';
       } else if (state === 'REST_TIMER') {
-        liveBadge.textContent = `REST & HYDRATION • ${restRemaining}s`;
-        liveBadge.className = 'hud-pill live-pill rest';
+        badge.textContent = `WATER BREAK • ${restRemaining}s`;
+        badge.className = 'demo-pill-live rest';
       } else if (state === 'PAUSED') {
-        liveBadge.textContent = 'WORKOUT PAUSED (HOLDING)';
-        liveBadge.className = 'hud-pill live-pill paused';
+        badge.textContent = 'WORKOUT PAUSED (HOLDING)';
+        badge.className = 'demo-pill-live paused';
       } else if (state === 'COMPLETED') {
-        liveBadge.textContent = 'WORKOUT COMPLETED! 🏆';
-        liveBadge.className = 'hud-pill live-pill victory';
+        badge.textContent = 'CHAMPION • WORKOUT COMPLETE 🏆';
+        badge.className = 'demo-pill-live victory';
       } else {
-        liveBadge.textContent = 'COACH READY • SAY START';
-        liveBadge.className = 'hud-pill live-pill';
+        badge.textContent = 'FORM COACH READY';
+        badge.className = 'demo-pill-live';
       }
     }
   }
 
-  updateExerciseCues() {
-    const primary = document.getElementById('cue-primary');
-    const rule = document.getElementById('cue-rule');
-    const tempo = document.getElementById('cue-tempo');
-    const formCue = document.getElementById('exercise-form-cue');
+  updateExerciseDetails() {
+    const ex = this.currentExercise;
+    const targetEl = document.getElementById('cue-val-target');
+    const ruleEl = document.getElementById('cue-val-rule');
+    const breathEl = document.getElementById('cue-val-breath');
+
+    if (ex.includes('diamond')) {
+      if (targetEl) targetEl.textContent = 'Triceps Brachii (Lateral & Medial)';
+      if (ruleEl) ruleEl.textContent = 'Thumbs & index form diamond • Elbows pinned to ribs';
+      if (breathEl) breathEl.textContent = '↘ Inhale 2s down • ↗ Exhale 1s drive';
+    } else if (ex.includes('dip')) {
+      if (targetEl) targetEl.textContent = 'Triceps & Anterior Deltoids';
+      if (ruleEl) ruleEl.textContent = 'Spine grazes bench edge • Lower to 90° elbow bend';
+      if (breathEl) breathEl.textContent = '↘ Inhale down • ↗ Exhale lock triceps';
+    } else if (ex.includes('squat')) {
+      if (targetEl) targetEl.textContent = 'Quadriceps, Gluteus Maximus, Hamstrings';
+      if (ruleEl) ruleEl.textContent = 'Hips below knees • Knees track over toes • Chest tall';
+      if (breathEl) breathEl.textContent = '↘ Inhale 2.5s down • ↗ Exhale drive heels';
+    } else if (ex.includes('lunge')) {
+      if (targetEl) targetEl.textContent = 'Quadriceps, Glutes & Hip Stabilizers';
+      if (ruleEl) ruleEl.textContent = '90° front knee • 90° rear knee hover • Torso upright';
+      if (breathEl) breathEl.textContent = '↘ Inhale step • ↗ Exhale press back';
+    } else if (ex.includes('plank') || ex.includes('hollow') || ex.includes('bear')) {
+      if (targetEl) targetEl.textContent = 'Rectus Abdominis, Transverse Core';
+      if (ruleEl) ruleEl.textContent = '180° straight line • Squeeze glutes • Pull belly button in';
+      if (breathEl) breathEl.textContent = 'Continuous slow diaphragmatic breathing';
+    } else if (ex.includes('climb')) {
+      if (targetEl) targetEl.textContent = 'Core, Hip Flexors, Conditioning';
+      if (ruleEl) ruleEl.textContent = 'Flat back • Drive knees toward sternum • Level hips';
+      if (breathEl) breathEl.textContent = 'Rhythmic cadence 1 breath / 2 drives';
+    } else if (ex.includes('pike')) {
+      if (targetEl) targetEl.textContent = 'Anterior Deltoids & Upper Trapezius';
+      if (ruleEl) ruleEl.textContent = 'Inverted V hips high • Head to tripod floor target';
+      if (breathEl) breathEl.textContent = '↘ Inhale descent • ↗ Exhale shoulder press';
+    } else {
+      if (targetEl) targetEl.textContent = 'Pectoralis Major & Triceps';
+      if (ruleEl) ruleEl.textContent = 'Elbows 45° tucked • Squeeze glutes • Chest touch floor';
+      if (breathEl) breathEl.textContent = '↘ Inhale 2s down • ↗ Exhale explode up';
+    }
+  }
+
+  renderTutorialCard() {
+    const container = document.getElementById('tutorial-card-body');
+    if (!container) return;
 
     const ex = this.currentExercise;
+    let guide = {
+      title: 'Standard Push-Up Technique Masterclass',
+      focus: 'Pectoralis Major, Anterior Deltoids, Triceps',
+      steps: [
+        { label: 'Setup', text: 'Place hands slightly wider than shoulder-width. Screw hands into the floor to activate external rotators.' },
+        { label: 'Movement', text: 'Lower your body in one rigid plank until your sternum lightly brushes the floor. Keep elbows at 45 degrees.' },
+        { label: 'Drive', text: 'Press aggressively through full palm, locking out elbows and protracting shoulder blades at the peak.' },
+        { label: 'Mistake Avoided', text: 'Never flare elbows out to 90 degrees (causes shoulder impingement). Never sag lower back.' }
+      ],
+      videoBadge: '4K Biomechanics Breakdown'
+    };
 
-    if (ex.includes('push')) {
-      if (primary) primary.textContent = 'Pectorals, Triceps, Anterior Delts';
-      if (rule) rule.textContent = 'Elbows at 45° • Glutes tight • Chest touch floor';
-      if (tempo) tempo.textContent = '2s Eccentric • 1s Concentric';
-      if (formCue) formCue.textContent = 'ELBOWS 45° TUCKED';
+    if (ex.includes('diamond')) {
+      guide = {
+        title: 'Diamond Push-Up Triceps Masterclass',
+        focus: 'Triceps Brachii (Lateral, Medial, Long Head)',
+        steps: [
+          { label: 'Hand Setup', text: 'Join thumbs and index fingers under sternum forming a diamond/triangle shape.' },
+          { label: 'Descent', text: 'Lower chest directly toward diamond. Pin elbows flush against your ribcage to isolate triceps.' },
+          { label: 'Peak Squeeze', text: 'Drive straight up, contracting triceps hard at the peak lockout.' },
+          { label: 'Pro Tip', text: 'If wrist mobility is tight, angle hands slightly outward or place feet wider for balance.' }
+        ],
+        videoBadge: 'Triceps Hypertrophy Guide'
+      };
+    } else if (ex.includes('dip')) {
+      guide = {
+        title: 'Bench / Chair Dips Masterclass',
+        focus: 'Triceps Brachii & Chest Dip Depths',
+        steps: [
+          { label: 'Hand Grip', text: 'Place palms on chair/bench edge, fingers forward, knuckles gripping firm.' },
+          { label: 'Trajectory', text: 'Keep your back grazing within 2 inches of the bench. Lower until elbows hit a clean 90-degree bend.' },
+          { label: 'Lockout', text: 'Drive vertically upward through palms, squeezing triceps at full extension.' },
+          { label: 'Safety Cue', text: 'Do not drop past 90 degrees to protect the anterior shoulder capsule.' }
+        ],
+        videoBadge: 'Olympic Calisthenics Guide'
+      };
     } else if (ex.includes('squat')) {
-      if (primary) primary.textContent = 'Quadriceps, Glutes, Hamstrings';
-      if (rule) rule.textContent = 'Thighs parallel • Knees track over toes • Chest tall';
-      if (tempo) tempo.textContent = '2.5s Down • 1s Explode Up';
-      if (formCue) formCue.textContent = 'PARALLEL DEPTH 90°';
+      guide = {
+        title: 'Bodyweight Squat Kinetic Masterclass',
+        focus: 'Quadriceps, Gluteus Maximus, Hamstring Chain',
+        steps: [
+          { label: 'Foot Stance', text: 'Feet shoulder-width apart, toes flared slightly out 15 to 25 degrees.' },
+          { label: 'Hip Hinge', text: 'Initiate by unlocking hips back, driving knees outward tracking directly over pinky toes.' },
+          { label: 'Depth', text: 'Sink until hip crease is parallel to or slightly below knee joint (90° flexion).' },
+          { label: 'Drive', text: 'Push the floor away through midfoot and heels, standing tall without hyperextending.' }
+        ],
+        videoBadge: 'Kinetic Squat Standard'
+      };
+    } else if (ex.includes('lunge')) {
+      guide = {
+        title: 'Alternating Lunges Symmetry Masterclass',
+        focus: 'Unilateral Quad Strength & Pelvic Stability',
+        steps: [
+          { label: 'Step Length', text: 'Take an intentional stride forward, landing midfoot with heel planted.' },
+          { label: 'Angle Rule', text: 'Lower until front thigh is parallel and rear knee hovers 1 inch off the floor (90° / 90°).' },
+          { label: 'Return', text: 'Drive through front heel to return cleanly to standing position.' },
+          { label: 'Balance Cue', text: 'Keep torso upright as if balancing a book on your head.' }
+        ],
+        videoBadge: 'Unilateral Balance Guide'
+      };
     } else if (ex.includes('plank')) {
-      if (primary) primary.textContent = 'Rectus Abdominis, Transverse Abdominis';
-      if (rule) rule.textContent = 'Straight line ear-shoulder-hip-heel • Brace abs';
-      if (tempo) tempo.textContent = 'Isometric Continuous Tension';
-      if (formCue) formCue.textContent = 'NEUTRAL SPINE LOCK';
+      guide = {
+        title: 'Forearm Plank Core Stability Masterclass',
+        focus: 'Anti-Extension Core Shield (Rectus & Transverse Abs)',
+        steps: [
+          { label: 'Elbow Stack', text: 'Elbows directly under shoulders, forearms parallel on mat.' },
+          { label: 'Core Tension', text: 'Brace your abdominal wall like preparing for a boxing punch. Squeeze glutes 100%.' },
+          { label: 'Alignment', text: 'Maintain a straight line from back of head, thoracic spine, hips, down to heels.' },
+          { label: 'Common Fault', text: 'Do not arch lower back or pike hips into the air. Keep pelvis neutral.' }
+        ],
+        videoBadge: 'Isometric Core Standard'
+      };
     } else if (ex.includes('climb')) {
-      if (primary) primary.textContent = 'Core, Hip Flexors, Cardiovascular';
-      if (rule) rule.textContent = 'Hips level • Drive knees to chest • Flat back';
-      if (tempo) tempo.textContent = 'Rapid Cadence 1s / rep';
-      if (formCue) formCue.textContent = 'PELVIS LEVEL';
-    } else {
-      if (primary) primary.textContent = 'Full Body Kinetic Chain';
-      if (rule) rule.textContent = 'Maintain controlled breathing & tight core';
-      if (tempo) tempo.textContent = 'Controlled Tempo';
-      if (formCue) formCue.textContent = 'FORM VERIFIED';
+      guide = {
+        title: 'Mountain Climbers Dynamic Cadence Masterclass',
+        focus: 'Core Flexion, Hip Flexors, High-Cadence Engine',
+        steps: [
+          { label: 'Base Position', text: 'Solid high-plank position, hands stacked beneath shoulders, fingers spread.' },
+          { label: 'Knee Drive', text: 'Drive right knee rapidly toward chest without letting hips bounce upward.' },
+          { label: 'Cadence', text: 'Alternate legs rhythmically, maintaining a stable flat tabletop back.' },
+          { label: 'Pacing', text: 'Focus on precision knee drives rather than frantic sloppy bouncing.' }
+        ],
+        videoBadge: 'Conditioning Form Guide'
+      };
+    } else if (ex.includes('pike')) {
+      guide = {
+        title: 'Pike Push-Up Overhead Deltoid Masterclass',
+        focus: 'Anterior Deltoids, Clavicular Pec, Triceps',
+        steps: [
+          { label: 'Pike Stance', text: 'Walk feet toward hands into an inverted V shape with hips elevated high.' },
+          { label: 'Tripod Path', text: 'Lower the crown of your head forward between hands to create an equilateral tripod.' },
+          { label: 'Press Path', text: 'Press back and upward, driving your head through shoulders at top extension.' },
+          { label: 'Progression', text: 'Elevate feet on a low bench to advance toward full handstand push-up.' }
+        ],
+        videoBadge: 'Shoulder Power Breakdown'
+      };
+    }
+
+    container.innerHTML = `
+      <div class="tut-masterclass-view">
+        <div class="tut-header-row">
+          <span class="tut-tag">${guide.videoBadge}</span>
+          <span class="tut-focus">${guide.focus}</span>
+        </div>
+        <h4 class="tut-title">${guide.title}</h4>
+        
+        <div class="tut-steps-grid">
+          ${guide.steps.map((s, i) => `
+            <div class="tut-step-card">
+              <div class="tut-step-num">${i + 1}</div>
+              <div class="tut-step-content">
+                <div class="tut-step-label">${s.label}</div>
+                <div class="tut-step-text">${s.text}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="tut-action-row">
+          <div class="tut-badge-pro">🏅 Sports Science Certified</div>
+          <button class="btn-listen-form" id="btn-listen-form" data-ex="${ex}">
+            🔊 Listen to Spoken Masterclass
+          </button>
+        </div>
+      </div>
+    `;
+
+    const btnListen = document.getElementById('btn-listen-form');
+    if (btnListen) {
+      btnListen.addEventListener('click', () => {
+        if (window.__triggerSpokenMasterclass) {
+          window.__triggerSpokenMasterclass(this.currentExercise);
+        }
+      });
     }
   }
 
@@ -354,248 +410,356 @@ export class ExerciseVisualizer {
       this.lastTime = now;
       this.animTime += dt;
 
-      this.renderFrame();
+      if (this.mode === 'simulation') {
+        this.renderFrame();
+      }
       this.rafId = requestAnimationFrame(loop);
     };
     this.rafId = requestAnimationFrame(loop);
   }
 
   renderFrame() {
-    const figLayer = document.getElementById('figure-dynamic-layer');
-    const telLayer = document.getElementById('telemetry-dynamic-layer');
-    if (!figLayer || !telLayer) return;
+    const fig = document.getElementById('fig-dynamic-layer');
+    const tel = document.getElementById('tel-dynamic-layer');
+    if (!fig || !tel) return;
 
     if (this.state === 'REST_TIMER') {
-      this.renderRestAthlete(figLayer, telLayer);
+      this.renderRest(fig, tel);
     } else if (this.state === 'PAUSED') {
-      this.renderPausedAthlete(figLayer, telLayer);
+      this.renderPaused(fig, tel);
     } else if (this.state === 'COMPLETED') {
-      this.renderVictoryAthlete(figLayer, telLayer);
+      this.renderVictory(fig, tel);
     } else {
-      if (this.currentExercise.includes('squat')) {
-        this.renderSquat(figLayer, telLayer);
-      } else if (this.currentExercise.includes('plank')) {
-        this.renderPlank(figLayer, telLayer);
-      } else if (this.currentExercise.includes('climb')) {
-        this.renderClimber(figLayer, telLayer);
+      const ex = this.currentExercise;
+      if (ex.includes('diamond')) {
+        this.renderDiamondPushup(fig, tel);
+      } else if (ex.includes('dip')) {
+        this.renderBenchDips(fig, tel);
+      } else if (ex.includes('squat')) {
+        this.renderSquat(fig, tel);
+      } else if (ex.includes('lunge')) {
+        this.renderLunge(fig, tel);
+      } else if (ex.includes('plank') || ex.includes('hollow') || ex.includes('bear')) {
+        this.renderPlank(fig, tel);
+      } else if (ex.includes('climb')) {
+        this.renderClimber(fig, tel);
+      } else if (ex.includes('pike')) {
+        this.renderPikePushup(fig, tel);
       } else {
-        this.renderPushup(figLayer, telLayer);
+        this.renderStandardPushup(fig, tel);
       }
     }
   }
 
-  // 1. PUSH-UP ANIMATION
-  renderPushup(fig, tel) {
-    const cycle = (Math.sin(this.animTime * 2.8) + 1) * 0.5;
-    const yOffset = cycle * 44;
+  // 1. STANDARD PUSH-UPS
+  renderStandardPushup(fig, tel) {
+    const cycle = (Math.sin(this.animTime * 2.6) + 1) * 0.5;
+    const yOffset = cycle * 42;
     const elbowAngle = Math.round(180 - cycle * 88);
 
-    const headX = 140, headY = 220 + yOffset;
-    const shoulderX = 180, shoulderY = 230 + yOffset;
-    const elbowX = 180 - cycle * 20, elbowY = 265 + yOffset * 0.4;
-    const handX = 180, handY = 300;
-    const hipX = 290, hipY = 235 + yOffset * 0.9;
-    const kneeX = 360, kneeY = 245 + yOffset * 0.6;
-    const footX = 420, footY = 300;
+    const headX = 140, headY = 205 + yOffset;
+    const shoulderX = 180, shoulderY = 215 + yOffset;
+    const elbowX = 180 - cycle * 20, elbowY = 248 + yOffset * 0.4;
+    const handX = 180, handY = 280;
+    const hipX = 290, hipY = 220 + yOffset * 0.9;
+    const kneeX = 360, kneeY = 230 + yOffset * 0.6;
+    const footX = 420, footY = 280;
 
     fig.innerHTML = `
       <polygon points="${shoulderX},${shoulderY} ${hipX},${hipY} ${hipX},${hipY+18} ${shoulderX},${shoulderY+20}" fill="url(#suitGrad)" stroke="#2D3142" stroke-width="2"/>
       <polygon points="${hipX},${hipY} ${kneeX},${kneeY} ${footX},${footY} ${footX-15},${footY} ${kneeX-8},${kneeY+14} ${hipX},${hipY+18}" fill="#1F222B" stroke="#2D3142" stroke-width="2"/>
-      <circle cx="${headX}" cy="${headY}" r="18" fill="url(#skinGrad)"/>
-      <path d="M${headX-16},${headY-6} Q${headX},${headY-24} ${headX+18},${headY-6}" fill="#2D3142"/>
-      <circle cx="${headX+10}" cy="${headY+2}" r="3" fill="#FFFFFF"/>
+      <circle cx="${headX}" cy="${headY}" r="17" fill="url(#skinGrad)"/>
+      <path d="M${headX-15},${headY-6} Q${headX},${headY-23} ${headX+17},${headY-6}" fill="#2D3142"/>
       <line x1="${shoulderX}" y1="${shoulderY}" x2="${elbowX}" y2="${elbowY}" stroke="url(#skinGrad)" stroke-width="12" stroke-linecap="round"/>
       <line x1="${elbowX}" y1="${elbowY}" x2="${handX}" y2="${handY}" stroke="url(#skinGrad)" stroke-width="10" stroke-linecap="round"/>
       <ellipse cx="${handX}" cy="${handY}" rx="12" ry="4" fill="#2A9D8F"/>
       <ellipse cx="${footX}" cy="${footY}" rx="14" ry="4" fill="#2A9D8F"/>
     `;
 
-    const isAtBottom = cycle > 0.85;
-    const depthColor = isAtBottom ? '#2A9D8F' : '#E07A5F';
-    const phaseText = cycle < 0.5 ? 'ECCENTRIC (LOWERING)' : 'CONCENTRIC (PRESSING)';
+    const isBottom = cycle > 0.85;
+    const color = isBottom ? '#2A9D8F' : '#E07A5F';
 
     tel.innerHTML = `
-      <line x1="${shoulderX}" y1="${shoulderY}" x2="${footX}" y2="${footY}" stroke="rgba(42,157,143,0.4)" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <circle cx="${elbowX}" cy="${elbowY}" r="16" fill="none" stroke="${depthColor}" stroke-width="2" stroke-dasharray="25,10"/>
-      <rect x="${elbowX-32}" y="${elbowY-28}" width="54" height="18" rx="4" fill="#181A20" stroke="${depthColor}" stroke-width="1"/>
-      <text x="${elbowX-5}" y="${elbowY-15}" fill="#FFF" font-family="'JetBrains Mono',monospace" font-size="10" text-anchor="middle">${elbowAngle}°</text>
-      <line x1="130" y1="285" x2="230" y2="285" stroke="${depthColor}" stroke-width="1.5" stroke-dasharray="3,3"/>
-      <circle cx="180" cy="285" r="${isAtBottom ? 6 : 3}" fill="${depthColor}"/>
-      <text x="180" y="278" fill="${depthColor}" font-family="'Inter',sans-serif" font-size="9" text-anchor="middle" font-weight="600">
-        ${isAtBottom ? 'CHEST TOUCH VERIFIED' : 'TARGET DEPTH'}
-      </text>
-      <text x="250" y="80" fill="#D4A373" font-family="'Space Grotesk',sans-serif" font-size="12" text-anchor="middle" font-weight="700">
-        ${phaseText}
+      <line x1="${shoulderX}" y1="${shoulderY}" x2="${footX}" y2="${footY}" stroke="rgba(42,157,143,0.3)" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <circle cx="${elbowX}" cy="${elbowY}" r="14" fill="none" stroke="${color}" stroke-width="2"/>
+      <rect x="${elbowX-28}" y="${elbowY-25}" width="50" height="16" rx="4" fill="#181A20" stroke="${color}" stroke-width="1"/>
+      <text x="${elbowX-3}" y="${elbowY-13}" fill="#FFF" font-family="'JetBrains Mono',monospace" font-size="9" text-anchor="middle">${elbowAngle}°</text>
+      <text x="250" y="55" fill="#D4A373" font-family="'Space Grotesk',sans-serif" font-size="12" text-anchor="middle" font-weight="700">
+        ${cycle < 0.5 ? 'ECCENTRIC: 2s LOWERING' : 'CONCENTRIC: 1s EXPLOSION'}
       </text>
     `;
   }
 
-  // 2. SQUAT ANIMATION
-  renderSquat(fig, tel) {
-    const cycle = (Math.sin(this.animTime * 2.4) + 1) * 0.5;
-    const hipDrop = cycle * 68;
-    const kneeAngle = Math.round(175 - cycle * 85);
+  // 2. DIAMOND PUSH-UPS (Triceps Blast)
+  renderDiamondPushup(fig, tel) {
+    const cycle = (Math.sin(this.animTime * 2.6) + 1) * 0.5;
+    const yOffset = cycle * 40;
+    const elbowAngle = Math.round(175 - cycle * 85);
 
-    const footX = 250, footY = 300;
-    const kneeX = 220 + cycle * 20, kneeY = 240 + hipDrop * 0.4;
-    const hipX = 280 + cycle * 30, hipY = 170 + hipDrop;
-    const shoulderX = 260 + cycle * 20, shoulderY = 100 + hipDrop;
-    const headX = 250 + cycle * 15, headY = 70 + hipDrop;
+    const headX = 145, headY = 205 + yOffset;
+    const shoulderX = 185, shoulderY = 215 + yOffset;
+    const elbowX = 200 + cycle * 8, elbowY = 246 + yOffset * 0.4;
+    const handX = 180, handY = 280;
+    const hipX = 295, hipY = 220 + yOffset * 0.88;
+    const footX = 420, footY = 280;
 
     fig.innerHTML = `
-      <ellipse cx="${footX}" cy="${footY+2}" rx="30" ry="6" fill="rgba(0,0,0,0.3)"/>
-      <polygon points="${shoulderX-14},${shoulderY} ${shoulderX+16},${shoulderY} ${hipX+14},${hipY} ${hipX-14},${hipY}" fill="url(#suitGrad)" stroke="#2D3142" stroke-width="2"/>
-      <line x1="${hipX}" y1="${hipY}" x2="${kneeX}" y2="${kneeY}" stroke="url(#suitGrad)" stroke-width="18" stroke-linecap="round"/>
+      <polygon points="${shoulderX},${shoulderY} ${hipX},${hipY} ${hipX},${hipY+18} ${shoulderX},${shoulderY+20}" fill="url(#suitGrad)" stroke="#2D3142" stroke-width="2"/>
+      <line x1="${hipX}" y1="${hipY}" x2="${footX}" y2="${footY}" stroke="#1F222B" stroke-width="16" stroke-linecap="round"/>
+      <circle cx="${headX}" cy="${headY}" r="17" fill="url(#skinGrad)"/>
+      <line x1="${shoulderX}" y1="${shoulderY}" x2="${elbowX}" y2="${elbowY}" stroke="#E07A5F" stroke-width="13" stroke-linecap="round" filter="url(#simGlow)"/>
+      <line x1="${elbowX}" y1="${elbowY}" x2="${handX}" y2="${handY}" stroke="url(#skinGrad)" stroke-width="10" stroke-linecap="round"/>
+      <!-- Diamond Hand Shape on floor -->
+      <polygon points="${handX-8},${handY} ${handX},${handY-6} ${handX+8},${handY} ${handX},${handY+6}" fill="#D4A373" stroke="#181A20" stroke-width="1.5"/>
+      <ellipse cx="${footX}" cy="${footY}" rx="14" ry="4" fill="#2A9D8F"/>
+    `;
+
+    tel.innerHTML = `
+      <rect x="${elbowX-10}" y="${elbowY-25}" width="75" height="18" rx="4" fill="#181A20" stroke="#E07A5F" stroke-width="1"/>
+      <text x="${elbowX+27}" y="${elbowY-12}" fill="#E07A5F" font-family="'JetBrains Mono',monospace" font-size="9" text-anchor="middle" font-weight="700">TRICEPS: ${elbowAngle}°</text>
+      <text x="250" y="55" fill="#E07A5F" font-family="'Space Grotesk',sans-serif" font-size="12" text-anchor="middle" font-weight="700">
+        DIAMOND HANDS UNDER STERNUM • ELBOWS TIGHT
+      </text>
+    `;
+  }
+
+  // 3. BENCH / CHAIR DIPS
+  renderBenchDips(fig, tel) {
+    const cycle = (Math.sin(this.animTime * 2.5) + 1) * 0.5;
+    const dipY = cycle * 44;
+    const elbowAngle = Math.round(175 - cycle * 85);
+
+    const benchX = 140, benchY = 190;
+    const handX = 160, handY = 190;
+    const shoulderX = 175, shoulderY = 175 + dipY;
+    const elbowX = 145 - cycle * 12, elbowY = 185 + dipY * 0.5;
+    const hipX = 185, hipY = 225 + dipY;
+    const kneeX = 240, kneeY = 225 + dipY * 0.5;
+    const footX = 280, footY = 280;
+
+    fig.innerHTML = `
+      <!-- Bench Object -->
+      <rect x="${benchX-40}" y="${benchY}" width="50" height="90" rx="4" fill="#D4A373" stroke="#2D3142" stroke-width="2"/>
+      <rect x="${benchX-45}" y="${benchY}" width="60" height="14" rx="3" fill="#B07D48"/>
+      <!-- Body -->
+      <polygon points="${shoulderX-12},${shoulderY} ${shoulderX+14},${shoulderY} ${hipX+12},${hipY} ${hipX-12},${hipY}" fill="url(#suitGrad)"/>
+      <line x1="${hipX}" y1="${hipY}" x2="${kneeX}" y2="${kneeY}" stroke="url(#suitGrad)" stroke-width="16" stroke-linecap="round"/>
+      <line x1="${kneeX}" y1="${kneeY}" x2="${footX}" y2="${footY}" stroke="#1E2028" stroke-width="14" stroke-linecap="round"/>
+      <circle cx="${shoulderX+5}" cy="${shoulderY-25}" r="16" fill="url(#skinGrad)"/>
+      <!-- Triceps & Arm -->
+      <line x1="${shoulderX}" y1="${shoulderY}" x2="${elbowX}" y2="${elbowY}" stroke="#E07A5F" stroke-width="12" stroke-linecap="round"/>
+      <line x1="${elbowX}" y1="${elbowY}" x2="${handX}" y2="${handY}" stroke="url(#skinGrad)" stroke-width="10" stroke-linecap="round"/>
+      <ellipse cx="${footX}" cy="${footY}" rx="14" ry="4" fill="#2A9D8F"/>
+    `;
+
+    tel.innerHTML = `
+      <circle cx="${elbowX}" cy="${elbowY}" r="14" fill="none" stroke="#E07A5F" stroke-width="2"/>
+      <text x="${elbowX-20}" y="${elbowY-8}" fill="#E07A5F" font-family="'JetBrains Mono',monospace" font-size="9" text-anchor="middle" font-weight="700">${elbowAngle}°</text>
+      <text x="320" y="70" fill="#D4A373" font-family="'Space Grotesk',sans-serif" font-size="12" text-anchor="middle" font-weight="700">
+        KEEP BACK GRAZING BENCH • LOCK TRICEPS
+      </text>
+    `;
+  }
+
+  // 4. BODYWEIGHT SQUATS
+  renderSquat(fig, tel) {
+    const cycle = (Math.sin(this.animTime * 2.3) + 1) * 0.5;
+    const hipDrop = cycle * 64;
+    const kneeAngle = Math.round(175 - cycle * 85);
+
+    const footX = 250, footY = 280;
+    const kneeX = 220 + cycle * 18, kneeY = 230 + hipDrop * 0.38;
+    const hipX = 280 + cycle * 28, hipY = 160 + hipDrop;
+    const shoulderX = 260 + cycle * 18, shoulderY = 95 + hipDrop;
+    const headX = 250 + cycle * 14, headY = 65 + hipDrop;
+
+    fig.innerHTML = `
+      <polygon points="${shoulderX-14},${shoulderY} ${shoulderX+16},${shoulderY} ${hipX+14},${hipY} ${hipX-14},${hipY}" fill="url(#suitGrad)"/>
+      <line x1="${hipX}" y1="${hipY}" x2="${kneeX}" y2="${kneeY}" stroke="#E07A5F" stroke-width="18" stroke-linecap="round"/>
       <line x1="${kneeX}" y1="${kneeY}" x2="${footX}" y2="${footY}" stroke="#1E2028" stroke-width="16" stroke-linecap="round"/>
       <circle cx="${headX}" cy="${headY}" r="17" fill="url(#skinGrad)"/>
-      <circle cx="${headX-6}" cy="${headY+2}" r="3" fill="#FFF"/>
-      <line x1="${shoulderX}" y1="${shoulderY}" x2="${shoulderX - 45}" y2="${shoulderY + 15}" stroke="url(#skinGrad)" stroke-width="10" stroke-linecap="round"/>
-      <ellipse cx="${footX}" cy="${footY}" rx="18" ry="5" fill="#2A9D8F"/>
+      <ellipse cx="${footX}" cy="${footY}" rx="20" ry="5" fill="#2A9D8F"/>
     `;
 
     const isParallel = cycle > 0.82;
     const color = isParallel ? '#2A9D8F' : '#E07A5F';
 
     tel.innerHTML = `
-      <circle cx="${kneeX}" cy="${kneeY}" r="18" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="25,8"/>
-      <rect x="${kneeX-35}" y="${kneeY-28}" width="58" height="18" rx="4" fill="#181A20" stroke="${color}" stroke-width="1"/>
-      <text x="${kneeX-6}" y="${kneeY-15}" fill="#FFF" font-family="'JetBrains Mono',monospace" font-size="10" text-anchor="middle">Knee: ${kneeAngle}°</text>
-      <line x1="160" y1="${hipY}" x2="340" y2="${hipY}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <text x="250" y="${hipY-8}" fill="${color}" font-family="'Inter',sans-serif" font-size="9" text-anchor="middle" font-weight="600">
-        ${isParallel ? 'PARALLEL DEPTH 90° REACHED' : 'DRIVE HIPS BACK'}
+      <circle cx="${kneeX}" cy="${kneeY}" r="16" fill="none" stroke="${color}" stroke-width="2"/>
+      <text x="${kneeX-32}" y="${kneeY}" fill="${color}" font-family="'JetBrains Mono',monospace" font-size="9" font-weight="700">Knee: ${kneeAngle}°</text>
+      <text x="250" y="45" fill="${color}" font-family="'Space Grotesk',sans-serif" font-size="12" text-anchor="middle" font-weight="700">
+        ${isParallel ? 'PARALLEL DEPTH 90° REACHED' : 'DRIVE HIPS BACK & DOWN'}
       </text>
-      <line x1="${footX}" y1="40" x2="${footX}" y2="300" stroke="rgba(212,163,115,0.3)" stroke-width="1" stroke-dasharray="2,4"/>
     `;
   }
 
-  // 3. PLANK ISOMETRIC ANIMATION
-  renderPlank(fig, tel) {
-    const breath = Math.sin(this.animTime * 2.5) * 4;
-    const shoulderX = 170, shoulderY = 230 + breath;
-    const hipX = 290, hipY = 232 + breath;
-    const kneeX = 360, kneeY = 240;
-    const footX = 420, footY = 300;
-    const headX = 130, headY = 222 + breath;
-    const elbowX = 170, elbowY = 300;
+  // 5. ALTERNATING LUNGES
+  renderLunge(fig, tel) {
+    const cycle = (Math.sin(this.animTime * 2.2) + 1) * 0.5;
+    const lungeDrop = cycle * 45;
+
+    const frontFootX = 180, frontFootY = 280;
+    const frontKneeX = 210, frontKneeY = 210 + lungeDrop * 0.4;
+    const hipX = 250, hipY = 160 + lungeDrop;
+    const shoulderX = 250, shoulderY = 100 + lungeDrop;
+    const rearKneeX = 280, rearKneeY = 220 + lungeDrop * 0.85;
+    const rearFootX = 340, rearFootY = 280;
 
     fig.innerHTML = `
-      <ellipse cx="${(shoulderX+hipX)*0.5}" cy="${shoulderY+15}" rx="32" ry="${14 + breath*1.5}" fill="none" stroke="#E07A5F" stroke-width="2" stroke-opacity="${0.4 + breath*0.08}"/>
-      <polygon points="${shoulderX},${shoulderY} ${hipX},${hipY} ${hipX},${hipY+20} ${shoulderX},${shoulderY+22}" fill="url(#suitGrad)" stroke="#2D3142" stroke-width="2"/>
-      <polygon points="${hipX},${hipY} ${kneeX},${kneeY} ${footX},${footY} ${footX-14},${footY} ${kneeX-6},${kneeY+14} ${hipX},${hipY+20}" fill="#1C1E26" stroke="#2D3142" stroke-width="2"/>
+      <polygon points="${shoulderX-12},${shoulderY} ${shoulderX+12},${shoulderY} ${hipX+12},${hipY} ${hipX-12},${hipY}" fill="url(#suitGrad)"/>
+      <!-- Front Leg -->
+      <line x1="${hipX}" y1="${hipY}" x2="${frontKneeX}" y2="${frontKneeY}" stroke="#E07A5F" stroke-width="16" stroke-linecap="round"/>
+      <line x1="${frontKneeX}" y1="${frontKneeY}" x2="${frontFootX}" y2="${frontFootX}" stroke="#1E2028" stroke-width="15" stroke-linecap="round"/>
+      <!-- Rear Leg -->
+      <line x1="${hipX}" y1="${hipY}" x2="${rearKneeX}" y2="${rearKneeY}" stroke="url(#suitGrad)" stroke-width="14" stroke-linecap="round"/>
+      <line x1="${rearKneeX}" y1="${rearKneeY}" x2="${rearFootX}" y2="${rearFootY}" stroke="#1E2028" stroke-width="13" stroke-linecap="round"/>
+      <circle cx="${shoulderX}" cy="${shoulderY-28}" r="16" fill="url(#skinGrad)"/>
+      <ellipse cx="${frontFootX}" cy="${frontFootY}" rx="14" ry="4" fill="#2A9D8F"/>
+      <ellipse cx="${rearFootX}" cy="${rearFootY}" rx="12" ry="4" fill="#2A9D8F"/>
+    `;
+
+    tel.innerHTML = `
+      <text x="250" y="55" fill="#2A9D8F" font-family="'Space Grotesk',sans-serif" font-size="12" text-anchor="middle" font-weight="700">
+        90° FRONT KNEE • 90° REAR KNEE HOVER • TORSO TALL
+      </text>
+    `;
+  }
+
+  // 6. FOREARM PLANK
+  renderPlank(fig, tel) {
+    const breath = Math.sin(this.animTime * 2.5) * 3;
+    const shoulderX = 170, shoulderY = 215 + breath;
+    const hipX = 290, hipY = 218 + breath;
+    const kneeX = 360, kneeY = 225;
+    const footX = 420, footY = 280;
+    const headX = 130, headY = 208 + breath;
+    const elbowX = 170, elbowY = 280;
+
+    fig.innerHTML = `
+      <!-- Core tension pulse -->
+      <ellipse cx="${(shoulderX+hipX)*0.5}" cy="${shoulderY+14}" rx="30" ry="${12 + breath*1.5}" fill="none" stroke="#E07A5F" stroke-width="2" stroke-opacity="0.8" filter="url(#simGlow)"/>
+      <polygon points="${shoulderX},${shoulderY} ${hipX},${hipY} ${hipX},${hipY+18} ${shoulderX},${shoulderY+20}" fill="url(#suitGrad)"/>
+      <polygon points="${hipX},${hipY} ${kneeX},${kneeY} ${footX},${footY} ${footX-14},${footY} ${kneeX-6},${kneeY+14} ${hipX},${hipY+18}" fill="#1C1E26"/>
       <line x1="${shoulderX}" y1="${shoulderY}" x2="${elbowX}" y2="${elbowY}" stroke="url(#skinGrad)" stroke-width="12" stroke-linecap="round"/>
       <ellipse cx="${elbowX}" cy="${elbowY}" rx="14" ry="4" fill="#2A9D8F"/>
       <ellipse cx="${footX}" cy="${footY}" rx="14" ry="4" fill="#2A9D8F"/>
-      <circle cx="${headX}" cy="${headY}" r="17" fill="url(#skinGrad)"/>
-      <circle cx="${headX+8}" cy="${headY+2}" r="3" fill="#FFF"/>
+      <circle cx="${headX}" cy="${headY}" r="16" fill="url(#skinGrad)"/>
     `;
 
     tel.innerHTML = `
-      <line x1="${headX}" y1="${headY}" x2="${footX}" y2="${footY}" stroke="#2A9D8F" stroke-width="2" stroke-dasharray="5,5"/>
-      <rect x="230" y="${shoulderY-35}" width="120" height="22" rx="5" fill="#181A20" stroke="#2A9D8F" stroke-width="1"/>
-      <text x="290" y="${shoulderY-20}" fill="#2A9D8F" font-family="'JetBrains Mono',monospace" font-size="10" text-anchor="middle" font-weight="600">CORE LOCKED • 180°</text>
-    `;
-  }
-
-  // 4. MOUNTAIN CLIMBERS
-  renderClimber(fig, tel) {
-    const cycle = (Math.sin(this.animTime * 5) + 1) * 0.5;
-    const knee1X = 240 + cycle * 70;
-    const knee2X = 310 - cycle * 70;
-
-    fig.innerHTML = `
-      <polygon points="170,225 290,230 290,248 170,245" fill="url(#suitGrad)" stroke="#2D3142" stroke-width="2"/>
-      <polyline points="290,230 ${knee1X},250 420,300" stroke="#1E2028" stroke-width="14" stroke-linecap="round" fill="none"/>
-      <polyline points="290,230 ${knee2X},250 380,300" stroke="url(#suitGrad)" stroke-width="14" stroke-linecap="round" fill="none"/>
-      <line x1="170" y1="225" x2="170" y2="300" stroke="url(#skinGrad)" stroke-width="12" stroke-linecap="round"/>
-      <ellipse cx="170" cy="300" rx="14" ry="4" fill="#2A9D8F"/>
-      <circle cx="130" cy="220" r="17" fill="url(#skinGrad)"/>
-    `;
-
-    tel.innerHTML = `
-      <text x="250" y="80" fill="#E07A5F" font-family="'Space Grotesk',sans-serif" font-size="13" text-anchor="middle" font-weight="700">
-        CADENCE: 80 REPS/MIN • CORE STABILIZED
+      <line x1="${headX}" y1="${headY}" x2="${footX}" y2="${footY}" stroke="#2A9D8F" stroke-width="2" stroke-dasharray="4,4"/>
+      <text x="250" y="55" fill="#2A9D8F" font-family="'Space Grotesk',sans-serif" font-size="12" text-anchor="middle" font-weight="700">
+        NEUTRAL SPINE 180° LOCKED • SQUEEZE GLUTES
       </text>
     `;
   }
 
-  // 5. REST & HYDRATION WATER BREAK ANIMATION
-  renderRestAthlete(fig, tel) {
+  // 7. MOUNTAIN CLIMBERS
+  renderClimber(fig, tel) {
+    const cycle = (Math.sin(this.animTime * 5.2) + 1) * 0.5;
+    const knee1X = 230 + cycle * 65;
+    const knee2X = 310 - cycle * 65;
+
+    fig.innerHTML = `
+      <polygon points="170,210 290,215 290,232 170,230" fill="url(#suitGrad)"/>
+      <polyline points="290,215 ${knee1X},235 410,280" stroke="#1E2028" stroke-width="14" stroke-linecap="round" fill="none"/>
+      <polyline points="290,215 ${knee2X},235 370,280" stroke="#E07A5F" stroke-width="14" stroke-linecap="round" fill="none"/>
+      <line x1="170" y1="210" x2="170" y2="280" stroke="url(#skinGrad)" stroke-width="12" stroke-linecap="round"/>
+      <ellipse cx="170" cy="280" rx="14" ry="4" fill="#2A9D8F"/>
+      <circle cx="130" cy="205" r="16" fill="url(#skinGrad)"/>
+    `;
+
+    tel.innerHTML = `
+      <text x="250" y="55" fill="#E07A5F" font-family="'Space Grotesk',sans-serif" font-size="12" text-anchor="middle" font-weight="700">
+        RAPID KNEE DRIVES • FLAT TABLETOP SPINE
+      </text>
+    `;
+  }
+
+  // 8. PIKE PUSH-UPS (Shoulders & Delts)
+  renderPikePushup(fig, tel) {
+    const cycle = (Math.sin(this.animTime * 2.4) + 1) * 0.5;
+    const dive = cycle * 38;
+
+    const handX = 180, handY = 280;
+    const footX = 350, footY = 280;
+    const hipX = 270 - cycle * 8, hipY = 120 + dive * 0.4;
+    const shoulderX = 215 - cycle * 12, shoulderY = 185 + dive;
+    const headX = 185 - cycle * 10, headY = 220 + dive;
+
+    fig.innerHTML = `
+      <!-- Inverted V Pike -->
+      <line x1="${footX}" y1="${footY}" x2="${hipX}" y2="${hipY}" stroke="#1E2028" stroke-width="16" stroke-linecap="round"/>
+      <polygon points="${hipX-10},${hipY} ${hipX+10},${hipY} ${shoulderX+10},${shoulderY} ${shoulderX-10},${shoulderY}" fill="url(#suitGrad)"/>
+      <circle cx="${headX}" cy="${headY}" r="16" fill="url(#skinGrad)"/>
+      <line x1="${shoulderX}" y1="${shoulderY}" x2="${handX}" y2="${handY}" stroke="#E07A5F" stroke-width="13" stroke-linecap="round" filter="url(#simGlow)"/>
+      <ellipse cx="${handX}" cy="${handY}" rx="14" ry="4" fill="#2A9D8F"/>
+      <ellipse cx="${footX}" cy="${footY}" rx="14" ry="4" fill="#2A9D8F"/>
+    `;
+
+    tel.innerHTML = `
+      <text x="250" y="55" fill="#E07A5F" font-family="'Space Grotesk',sans-serif" font-size="12" text-anchor="middle" font-weight="700">
+        INVERTED V HIPS HIGH • LOWER CROWN TO TRIPOD
+      </text>
+    `;
+  }
+
+  // REST & WATER BREAK
+  renderRest(fig, tel) {
     const drinkPhase = (Math.sin(this.animTime * 1.8) + 1) * 0.5;
-    const bottleY = 135 - drinkPhase * 15;
+    const bottleY = 125 - drinkPhase * 15;
     const bottleAngle = drinkPhase * 35;
 
     fig.innerHTML = `
-      <polygon points="235,130 265,130 270,230 230,230" fill="url(#suitGrad)" stroke="#2D3142" stroke-width="2"/>
-      <line x1="240" y1="230" x2="235" y2="300" stroke="#1E2028" stroke-width="16" stroke-linecap="round"/>
-      <line x1="260" y1="230" x2="265" y2="300" stroke="#1E2028" stroke-width="16" stroke-linecap="round"/>
-      <circle cx="250" cy="95" r="18" fill="url(#skinGrad)"/>
-      <circle cx="244" cy="95" r="3" fill="#FFF"/>
-      <line x1="260" y1="135" x2="255" y2="${bottleY+25}" stroke="url(#skinGrad)" stroke-width="10" stroke-linecap="round"/>
+      <polygon points="235,120 265,120 270,220 230,220" fill="url(#suitGrad)"/>
+      <line x1="240" y1="220" x2="235" y2="280" stroke="#1E2028" stroke-width="16" stroke-linecap="round"/>
+      <line x1="260" y1="220" x2="265" y2="280" stroke="#1E2028" stroke-width="16" stroke-linecap="round"/>
+      <circle cx="250" cy="85" r="18" fill="url(#skinGrad)"/>
+      <line x1="260" y1="125" x2="255" y2="${bottleY+25}" stroke="url(#skinGrad)" stroke-width="10" stroke-linecap="round"/>
+      <!-- Shaker Bottle -->
       <g transform="translate(255, ${bottleY}) rotate(${bottleAngle})">
         <rect x="-8" y="-20" width="16" height="34" rx="4" fill="#2A9D8F" stroke="#FFF" stroke-width="1.5"/>
         <rect x="-5" y="-25" width="10" height="6" rx="2" fill="#E07A5F"/>
-        <circle cx="2" cy="-10" r="2" fill="#8CE8FF"/>
       </g>
     `;
 
-    const pct = Math.max(0, this.restRemaining / (this.totalRest || 30));
-    const circumference = 2 * Math.PI * 35;
-    const offset = circumference * (1 - pct);
-
     tel.innerHTML = `
-      <g transform="translate(100, 110)">
-        <circle cx="0" cy="0" r="35" fill="none" stroke="rgba(212,163,115,0.15)" stroke-width="6"/>
-        <circle cx="0" cy="0" r="35" fill="none" stroke="#2A9D8F" stroke-width="6" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90)"/>
-        <text x="0" y="6" fill="#181A20" font-family="'Space Grotesk',sans-serif" font-size="18" font-weight="800" text-anchor="middle">${this.restRemaining}s</text>
-        <text x="0" y="24" fill="#2A9D8F" font-family="'Inter',sans-serif" font-size="9" font-weight="700" text-anchor="middle">REST TIMER</text>
-      </g>
-
-      <g transform="translate(380, 110)">
-        <rect x="-60" y="-30" width="120" height="60" rx="8" fill="#181A20" stroke="#E07A5F" stroke-width="1.5"/>
-        <text x="0" y="-8" fill="#E07A5F" font-family="'Inter',sans-serif" font-size="9" font-weight="700" text-anchor="middle">HEART RATE</text>
-        <text x="0" y="14" fill="#FFF" font-family="'Space Grotesk',sans-serif" font-size="18" font-weight="800" text-anchor="middle">128 BPM</text>
-      </g>
-
-      <text x="250" y="60" fill="#E07A5F" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="700" text-anchor="middle">
-        HYDRATE & RECOVER • SAY "SKIP REST" TO RESUME
+      <text x="250" y="55" fill="#2A9D8F" font-family="'Space Grotesk',sans-serif" font-size="13" text-anchor="middle" font-weight="700">
+        💧 REHYDRATE & CATCH BREATH • SAY "RESUME" OR "SKIP REST"
       </text>
     `;
   }
 
-  // 6. PAUSED STATE
-  renderPausedAthlete(fig, tel) {
+  // PAUSED
+  renderPaused(fig, tel) {
     fig.innerHTML = `
-      <polygon points="235,130 265,130 270,230 230,230" fill="url(#suitGrad)" stroke="#2D3142" stroke-width="2"/>
-      <line x1="240" y1="230" x2="235" y2="300" stroke="#1E2028" stroke-width="16" stroke-linecap="round"/>
-      <line x1="260" y1="230" x2="265" y2="300" stroke="#1E2028" stroke-width="16" stroke-linecap="round"/>
+      <polygon points="235,120 265,120 270,220 230,220" fill="url(#suitGrad)"/>
+      <line x1="240" y1="220" x2="235" y2="280" stroke="#1E2028" stroke-width="16" stroke-linecap="round"/>
+      <line x1="260" y1="220" x2="265" y2="280" stroke="#1E2028" stroke-width="16" stroke-linecap="round"/>
+      <circle cx="250" cy="85" r="18" fill="url(#skinGrad)"/>
+    `;
+
+    tel.innerHTML = `
+      <text x="250" y="55" fill="#E07A5F" font-family="'Space Grotesk',sans-serif" font-size="13" text-anchor="middle" font-weight="700">
+        ⏸ WORKOUT PAUSED • SAY "RESUME" OR "START" TO CONTINUE
+      </text>
+    `;
+  }
+
+  // VICTORY
+  renderVictory(fig, tel) {
+    fig.innerHTML = `
+      <polygon points="235,130 265,130 270,220 230,220" fill="url(#suitGrad)"/>
+      <line x1="240" y1="220" x2="230" y2="280" stroke="#1E2028" stroke-width="16"/>
+      <line x1="260" y1="220" x2="270" y2="280" stroke="#1E2028" stroke-width="16"/>
       <circle cx="250" cy="95" r="18" fill="url(#skinGrad)"/>
+      <line x1="235" y1="130" x2="200" y2="60" stroke="url(#skinGrad)" stroke-width="11" stroke-linecap="round"/>
+      <line x1="265" y1="130" x2="300" y2="60" stroke="url(#skinGrad)" stroke-width="11" stroke-linecap="round"/>
     `;
 
     tel.innerHTML = `
-      <rect x="130" y="45" width="240" height="40" rx="8" fill="#E07A5F" stroke="#FFF" stroke-width="1.5"/>
-      <text x="250" y="70" fill="#FFF" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="800" text-anchor="middle">
-        WORKOUT PAUSED (HOLDING)
-      </text>
-      <text x="250" y="115" fill="#181A20" font-family="'Inter',sans-serif" font-size="12" font-weight="600" text-anchor="middle">
-        Say "Start", "Resume", or "I am okay now" to continue
-      </text>
-    `;
-  }
-
-  // 7. VICTORY STATE
-  renderVictoryAthlete(fig, tel) {
-    fig.innerHTML = `
-      <polygon points="235,140 265,140 270,230 230,230" fill="url(#suitGrad)"/>
-      <line x1="240" y1="230" x2="230" y2="300" stroke="#1E2028" stroke-width="16"/>
-      <line x1="260" y1="230" x2="270" y2="300" stroke="#1E2028" stroke-width="16"/>
-      <circle cx="250" cy="105" r="18" fill="url(#skinGrad)"/>
-      <line x1="235" y1="140" x2="200" y2="70" stroke="url(#skinGrad)" stroke-width="11" stroke-linecap="round"/>
-      <line x1="265" y1="140" x2="300" y2="70" stroke="url(#skinGrad)" stroke-width="11" stroke-linecap="round"/>
-    `;
-
-    tel.innerHTML = `
-      <text x="250" y="45" fill="#2A9D8F" font-family="'Space Grotesk',sans-serif" font-size="18" font-weight="800" text-anchor="middle">
-        WORKOUT CRUSHED! 🏆
+      <text x="250" y="45" fill="#2A9D8F" font-family="'Space Grotesk',sans-serif" font-size="16" font-weight="800" text-anchor="middle">
+        🏆 WORKOUT COMPLETED! OUTSTANDING EFFORT!
       </text>
     `;
   }

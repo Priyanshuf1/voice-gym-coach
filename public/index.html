@@ -78,84 +78,47 @@
         <span id="robot-speech-text">"Ready to train! Give me the command."</span>
       </div>
 
-      <!-- Live Spline 3D Robot Container -->
-      <div class="robot-canvas-wrapper">
+      <!-- Live Robot Stage Container (Spline 3D Robot & NEXBOT Athlete) -->
+      <div class="robot-canvas-wrapper" id="robot-canvas-wrapper">
         <div class="robot-status-overlay">
-          <div class="robot-action-badge" id="robot-action-badge">
+          <div class="robot-action-badge">
             <span class="robot-action-dot"></span>
-            <span id="robot-action-text">ACTIVE MASCOT</span>
+            <span id="robot-action-text">3D ROBOT COACH (SPLINE)</span>
           </div>
+
+          <div class="robot-spline-badge">
+            <button class="btn-spline-toggle" id="btn-toggle-custom-spline" title="Load custom Spline 3D scene">
+              ✨ 3D Model URL
+            </button>
+          </div>
+
           <span class="robot-exercise-tag" id="robot-current-exercise">PUSH-UPS</span>
         </div>
+
+        <!-- Custom Spline Scene URL Drawer (Collapsible) -->
+        <div class="custom-spline-drawer" id="custom-spline-drawer" style="display: none;">
+          <input type="text" id="custom-spline-input" class="custom-spline-input" placeholder="Paste exported .splinecode URL..." value="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode" />
+          <button class="btn-load-spline" id="btn-load-spline">Load Model</button>
+        </div>
+
         <div id="robot-viewer-wrapper" class="robot-viewer-wrapper">
-          <div class="cyber-coach-mascot" id="cyber-coach-mascot">
-            <svg class="coach-svg" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#292524"/>
-                  <stop offset="50%" stop-color="#1C1917"/>
-                  <stop offset="100%" stop-color="#0C0A09"/>
-                </linearGradient>
-                <linearGradient id="chromeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#D4A373"/>
-                  <stop offset="50%" stop-color="#A98467"/>
-                  <stop offset="100%" stop-color="#6C584C"/>
-                </linearGradient>
-                <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stop-color="#E07A5F" stop-opacity="0.9"/>
-                  <stop offset="40%" stop-color="#E07A5F" stop-opacity="0.4"/>
-                  <stop offset="100%" stop-color="#E07A5F" stop-opacity="0"/>
-                </radialGradient>
-                <filter id="glowFilter" x="-30%" y="-30%" width="160%" height="160%">
-                  <feGaussianBlur stdDeviation="3" result="blur"/>
-                  <feMerge>
-                    <feMergeNode in="blur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
-                </filter>
-              </defs>
-              
-              <!-- Torso & Athletic Chest Plate -->
-              <path d="M68 170 L172 170 L198 240 L42 240 Z" fill="url(#bodyGrad)" stroke="#44403C" stroke-width="2"/>
-              <path d="M85 175 L155 175 L165 210 L75 210 Z" fill="#1C1917" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
-              
-              <!-- Cyber Core Reactor -->
-              <circle cx="120" cy="192" r="14" fill="#292524" stroke="#E07A5F" stroke-width="1.5"/>
-              <circle cx="120" cy="192" r="9" fill="url(#coreGlow)" class="core-pulse-circle"/>
-              <circle cx="120" cy="192" r="3" fill="#FFF" filter="url(#glowFilter)"/>
-              
-              <!-- Neck Hydraulic Pivot -->
-              <rect x="110" y="142" width="20" height="28" rx="4" fill="url(#chromeGrad)" stroke="#292524" stroke-width="1"/>
-              <line x1="110" y1="150" x2="130" y2="150" stroke="#E07A5F" stroke-width="1.5" stroke-opacity="0.6"/>
-              <line x1="110" y1="156" x2="130" y2="156" stroke="#E07A5F" stroke-width="1.5" stroke-opacity="0.6"/>
-              
-              <!-- Head & Helmet Assembly -->
-              <g class="robot-head-group">
-                <path d="M75 90 C75 48, 165 48, 165 90 C165 125, 145 145, 120 145 C95 145, 75 125, 75 90 Z" fill="url(#bodyGrad)" stroke="#57534E" stroke-width="2"/>
-                <path d="M90 58 L150 58 L158 78 L82 78 Z" fill="url(#chromeGrad)" opacity="0.45"/>
-                
-                <!-- Visor & Optical Sensor -->
-                <rect x="85" y="86" width="70" height="18" rx="9" fill="#0C0A09" stroke="#E07A5F" stroke-width="1.5"/>
-                <path d="M92 95 L148 95" stroke="#E07A5F" stroke-width="4" stroke-linecap="round" filter="url(#glowFilter)" class="visor-scan-beam"/>
-                <circle cx="120" cy="95" r="4" fill="#FFFFFF" filter="url(#glowFilter)" class="visor-pupil"/>
-                
-                <!-- Spoken Voice Speaker Grille (Animated Mouth) -->
-                <g class="mouth-speaker-grille">
-                  <rect x="103" y="118" width="34" height="14" rx="7" fill="#0C0A09" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-                  <line x1="109" y1="125" x2="113" y2="125" stroke="#D4A373" stroke-width="2.5" stroke-linecap="round" class="mouth-bar bar-1"/>
-                  <line x1="116" y1="125" x2="124" y2="125" stroke="#E07A5F" stroke-width="2.5" stroke-linecap="round" class="mouth-bar bar-2"/>
-                  <line x1="127" y1="125" x2="131" y2="125" stroke="#D4A373" stroke-width="2.5" stroke-linecap="round" class="mouth-bar bar-3"/>
-                </g>
-                
-                <!-- Ear Antennas & Microphones -->
-                <path d="M72 82 L64 75 L64 105 L72 100 Z" fill="url(#chromeGrad)" stroke="#44403C" stroke-width="1"/>
-                <circle cx="68" cy="90" r="3" fill="#2A9D8F" filter="url(#glowFilter)"/>
-                <path d="M168 82 L176 75 L176 105 L168 100 Z" fill="url(#chromeGrad)" stroke="#44403C" stroke-width="1"/>
-                <circle cx="172" cy="90" r="3" fill="#2A9D8F" filter="url(#glowFilter)"/>
-              </g>
-            </svg>
+          <div class="spline-3d-stage" id="spline-3d-stage">
+            <div class="robot-aura" id="robot-aura"></div>
+            <!-- Original Interactive 3D Spline Robot (From First Version) -->
+            <spline-viewer id="spline-robot" loading-anim-type="spinner-small-dark" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
           </div>
-          <spline-viewer id="spline-robot" loading-anim-type="spinner-small-dark" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
+        </div>
+
+        <!-- Live "What I Spoke" Voice Transcript Pill Button -->
+        <div class="user-spoken-banner" id="user-spoken-banner" title="Click to hear what was recognized">
+          <div class="spoken-left">
+            <span class="spoken-icon">🗣️</span>
+            <div class="spoken-details">
+              <span class="spoken-title">WHAT YOU SPOKE:</span>
+              <span class="spoken-text" id="live-spoken-transcript">Waiting for your voice... (Say "Start", "Pause", or ask anything!)</span>
+            </div>
+          </div>
+          <button class="btn-voice-replay" id="btn-voice-replay" title="Replay recognized speech">🔊 Replay</button>
         </div>
       </div>
     </div>
@@ -186,6 +149,9 @@
         <h2 id="exercise-name" class="exercise-title">Push-Ups</h2>
         <p id="workout-target" class="set-subtitle">Target: 8 Reps • 30s Rest</p>
       </div>
+
+      <!-- Virtual Exercise Form Demonstration & Video Player -->
+      <div class="exercise-demo-container" id="exercise-demo-container"></div>
 
       <!-- Circular Progress Ring & Numbers -->
       <div class="circle-container">

@@ -23,9 +23,14 @@ export class AudioController {
     this.queue = [];
     this.isPlaying = false;
     this.isInterrupted = false;
+    this.ignoreBargeInUntil = 0;
 
     // AudioContext for Web Audio if needed
     this.audioCtx = null;
+  }
+
+  get isActivelyEmittingSound() {
+    return !!(this.currentAudio && !this.currentAudio.paused && this.currentAudio.currentTime > 0.05);
   }
 
   initAudioContext() {
@@ -49,8 +54,19 @@ export class AudioController {
   async speak(text, priority = false) {
     if (!text || !text.trim()) return false;
 
+    // Track speech for acoustic echo suppression across microphone listeners
+    const cleanSpeech = text.toLowerCase().trim();
+    window.__isCoachSpeaking = true;
+    window.__lastCoachSpeech = cleanSpeech;
+    window.__recentCoachUtterances = window.__recentCoachUtterances || [];
+    window.__recentCoachUtterances.unshift(cleanSpeech);
+    if (window.__recentCoachUtterances.length > 8) window.__recentCoachUtterances.pop();
+
+    // Protect newly triggered speech from immediate self-barge-in by user's trailing breath
+    this.ignoreBargeInUntil = Date.now() + 850;
+
     if (priority) {
-      this.interrupt('New priority phrase dispatched');
+      this.interrupt('New priority phrase dispatched', true);
     }
 
     this.isInterrupted = false;
@@ -62,6 +78,7 @@ export class AudioController {
 
       this.onSubtitleUpdate(text);
       this.isPlaying = true;
+      window.__isCoachSpeaking = true;
       this.onPlaybackState(true, text);
 
       try {
@@ -70,6 +87,8 @@ export class AudioController {
         // Check if interrupted while fetching from network
         if (this.isInterrupted || signal.aborted) {
           this.isPlaying = false;
+          window.__isCoachSpeaking = false;
+          window.__coachSpeechEndedAt = Date.now();
           this.onPlaybackState(false, '');
           resolve(false);
           return;
@@ -85,6 +104,8 @@ export class AudioController {
             URL.revokeObjectURL(audioUrl);
             this.currentAudio = null;
             this.isPlaying = false;
+            window.__isCoachSpeaking = false;
+            window.__coachSpeechEndedAt = Date.now();
             this.onPlaybackState(false, '');
             resolve(true);
           };
@@ -94,6 +115,8 @@ export class AudioController {
             URL.revokeObjectURL(audioUrl);
             this.currentAudio = null;
             this.isPlaying = false;
+            window.__isCoachSpeaking = false;
+            window.__coachSpeechEndedAt = Date.now();
             this.onPlaybackState(false, '');
             resolve(false);
           };
@@ -105,6 +128,8 @@ export class AudioController {
         }
       } catch (err) {
         this.isPlaying = false;
+        window.__isCoachSpeaking = false;
+        window.__coachSpeechEndedAt = Date.now();
         this.onPlaybackState(false, '');
         if (err.name === 'AbortError') {
           resolve(false);
@@ -119,6 +144,8 @@ export class AudioController {
   playBrowserSynthesis(text, resolve) {
     if (!('speechSynthesis' in window)) {
       this.isPlaying = false;
+      window.__isCoachSpeaking = false;
+      window.__coachSpeechEndedAt = Date.now();
       this.onPlaybackState(false, '');
       resolve(true);
       return;
@@ -131,11 +158,14 @@ export class AudioController {
 
     utterance.onstart = () => {
       this.isPlaying = true;
+      window.__isCoachSpeaking = true;
       this.onPlaybackState(true, text);
     };
 
     utterance.onend = () => {
       this.isPlaying = false;
+      window.__isCoachSpeaking = false;
+      window.__coachSpeechEndedAt = Date.now();
       this.onPlaybackState(false, '');
       resolve(true);
     };
@@ -145,6 +175,8 @@ export class AudioController {
         console.warn('[AudioController] Fallback TTS error:', e);
       }
       this.isPlaying = false;
+      window.__isCoachSpeaking = false;
+      window.__coachSpeechEndedAt = Date.now();
       this.onPlaybackState(false, '');
       resolve(false);
     };
@@ -157,10 +189,17 @@ export class AudioController {
    * Cuts off audio playback in 0-10 milliseconds.
    * Purges queues and aborts pending network streams.
    */
-  interrupt(reason = 'User voice barge-in') {
+  interrupt(reason = 'User voice barge-in', force = false) {
+    if (!force && Date.now() < this.ignoreBargeInUntil) {
+      console.log(`[AudioController] Ignored self-barge-in during grace period (${reason})`);
+      return 0;
+    }
+
     const startTime = performance.now();
     this.isInterrupted = true;
     this.isPlaying = false;
+    window.__isCoachSpeaking = false;
+    window.__coachSpeechEndedAt = Date.now();
     this.onPlaybackState(false, '');
 
     // 1. Instantly stop HTMLAudio playback

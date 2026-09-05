@@ -420,7 +420,7 @@ body {
 .robot-canvas-wrapper {
   position: relative;
   width: 100%;
-  height: 380px;
+  min-height: 440px;
   background: radial-gradient(circle at center, #FFFFFF 0%, #FAF8F5 100%);
   border-radius: 18px;
   overflow: hidden;
@@ -478,6 +478,86 @@ body {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
+/* Live "What I Spoke" User Transcript Banner */
+.user-spoken-banner {
+  position: absolute;
+  bottom: 12px;
+  left: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 163, 115, 0.35);
+  border-radius: 12px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  z-index: 15;
+  box-shadow: 0 4px 16px rgba(45, 49, 66, 0.08);
+  transition: all 0.2s ease;
+}
+
+.user-spoken-banner:hover {
+  border-color: var(--accent-terracotta);
+  box-shadow: 0 6px 20px rgba(224, 122, 95, 0.15);
+}
+
+.spoken-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.spoken-icon {
+  font-size: 1.1rem;
+  animation: pulseAnim 2s infinite ease-in-out;
+}
+
+.spoken-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.spoken-title {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-terracotta);
+}
+
+.spoken-text {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-headline);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-voice-replay {
+  background: rgba(224, 122, 95, 0.12);
+  border: 1px solid rgba(224, 122, 95, 0.3);
+  color: var(--accent-terracotta);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-voice-replay:hover {
+  background: var(--accent-terracotta);
+  color: #FFFFFF;
+}
+
 .robot-viewer-wrapper {
   width: 100%;
   height: 100%;
@@ -488,54 +568,675 @@ body {
   z-index: 2;
   transform-origin: center bottom;
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  padding-top: 15px;
+  padding-bottom: 65px;
 }
 
-#spline-robot {
-  width: 100%;
-  height: 100%;
-  display: block;
-  position: absolute;
-  inset: 0;
-  z-index: 3;
+/* =========================================================
+   Robot Mode Selector Tabs
+   ========================================================= */
+.robot-tab-switcher {
+  display: inline-flex;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--panel-border);
+  border-radius: 9999px;
+  padding: 3px;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   pointer-events: auto;
 }
 
-/* Cyber Coach Mascot (Fallback & Loading Anchor) */
-.cyber-coach-mascot {
-  width: 250px;
-  height: 250px;
+.robot-tab-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  white-space: nowrap;
+}
+
+.robot-tab-btn:hover {
+  color: var(--text-headline);
+  background: rgba(212, 163, 115, 0.1);
+}
+
+.robot-tab-btn.active {
+  background: #FFFFFF;
+  color: var(--accent-terracotta);
+  border: 1px solid rgba(224, 122, 95, 0.35);
+  box-shadow: 0 2px 8px rgba(224, 122, 95, 0.15);
+}
+
+/* =========================================================
+   NEXBOT Spline Character & 3D Interactive Display
+   ========================================================= */
+.robot-display-pane {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  z-index: 2;
-  transition: transform 0.3s ease;
+  position: relative;
 }
 
-.coach-svg {
+.nexbot-card {
+  position: relative;
+  width: 290px;
+  height: 310px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  perspective: 1200px;
+  transform-style: preserve-3d;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  cursor: pointer;
+  margin-bottom: 25px;
+}
+
+.nexbot-hologram-aura {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle at center, rgba(6, 182, 212, 0.2) 0%, rgba(224, 122, 95, 0.12) 45%, transparent 70%);
+  border-radius: 50%;
+  z-index: 1;
+  animation: auraPulse 3s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes auraPulse {
+  0%, 100% { transform: scale(0.95); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 0.95; }
+}
+
+.nexbot-avatar-img {
+  max-height: 275px;
+  width: auto;
+  object-fit: contain;
+  position: relative;
+  z-index: 3;
+  filter: drop-shadow(0 14px 28px rgba(15, 20, 32, 0.28));
+  border-radius: 16px;
+  transition: transform 0.25s ease, filter 0.25s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.nexbot-visor-beam {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 76px;
+  height: 6px;
+  background: linear-gradient(90deg, transparent, #06B6D4, #2A9D8F, #06B6D4, transparent);
+  border-radius: 3px;
+  z-index: 4;
+  opacity: 0.85;
+  box-shadow: 0 0 12px #06B6D4, 0 0 20px rgba(6, 182, 212, 0.6);
+  animation: visorSweep 2.2s infinite ease-in-out alternate;
+  pointer-events: none;
+}
+
+@keyframes visorSweep {
+  0% { opacity: 0.5; transform: translateX(-52%) scaleX(0.85); }
+  50% { opacity: 1; transform: translateX(-50%) scaleX(1.05); }
+  100% { opacity: 0.5; transform: translateX(-48%) scaleX(0.85); }
+}
+
+.nexbot-core-glow {
+  position: absolute;
+  top: 136px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
+  background: radial-gradient(circle at center, rgba(6, 182, 212, 0.9) 0%, rgba(42, 157, 143, 0.4) 60%, transparent 80%);
+  border-radius: 50%;
+  z-index: 4;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.8);
+  animation: corePulse 2s infinite ease-in-out;
+  pointer-events: none;
+}
+
+.nexbot-meta-pill {
+  position: absolute;
+  bottom: 0px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--panel-border);
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-headline);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  z-index: 5;
+}
+
+.nexbot-spline-link {
+  color: var(--accent-terracotta);
+  text-decoration: none;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(224, 122, 95, 0.1);
+  transition: all 0.2s ease;
+}
+
+.nexbot-spline-link:hover {
+  background: var(--accent-terracotta);
+  color: #FFFFFF;
+}
+
+/* Speaking State for NEXBOT */
+.robot-viewer-wrapper.is-talking .nexbot-visor-beam {
+  animation: visorSpeak 0.3s infinite alternate;
+  box-shadow: 0 0 22px var(--accent-terracotta), 0 0 35px var(--accent-gold);
+  background: linear-gradient(90deg, transparent, #E07A5F, #F4A261, #E07A5F, transparent);
+}
+
+@keyframes visorSpeak {
+  0% { opacity: 0.6; transform: translateX(-50%) scale(0.9); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+}
+
+.robot-viewer-wrapper.is-talking .nexbot-core-glow {
+  box-shadow: 0 0 24px var(--accent-gold);
+}
+
+/* Rep Action Animations on NEXBOT & v1 Viewer */
+.robot-viewer-wrapper.action-pushup-rep .nexbot-card,
+.robot-viewer-wrapper.action-pushup-rep .spline-v1-container {
+  animation: robotPushup var(--pacing-duration, 2.2s) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.robot-viewer-wrapper.action-squat-rep .nexbot-card,
+.robot-viewer-wrapper.action-squat-rep .spline-v1-container {
+  animation: robotSquat var(--pacing-duration, 2.2s) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.robot-viewer-wrapper.action-jump-rep .nexbot-card,
+.robot-viewer-wrapper.action-jump-rep .spline-v1-container {
+  animation: robotJump 0.8s ease-in-out infinite;
+}
+
+.robot-viewer-wrapper.action-plank-hold .nexbot-card,
+.robot-viewer-wrapper.action-plank-hold .spline-v1-container {
+  animation: robotPlank 2.5s ease-in-out infinite;
+}
+
+.robot-viewer-wrapper.action-rest-breathe .nexbot-card,
+.robot-viewer-wrapper.action-rest-breathe .spline-v1-container {
+  animation: robotBreathe 3.2s ease-in-out infinite;
+}
+
+@keyframes robotPushup {
+  0% { transform: translateY(0) rotateX(0deg); }
+  35% { transform: translateY(22px) rotateX(12deg) scale(0.96); }
+  70% { transform: translateY(-4px) rotateX(-4deg) scale(1.02); }
+  100% { transform: translateY(0) rotateX(0deg); }
+}
+
+@keyframes robotSquat {
+  0% { transform: translateY(0) scaleY(1); }
+  40% { transform: translateY(28px) scaleY(0.92) scaleX(1.04); }
+  75% { transform: translateY(-6px) scaleY(1.03) scaleX(0.98); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+
+@keyframes robotJump {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-24px) scale(1.04); }
+}
+
+@keyframes robotPlank {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(4px) rotate(1deg); }
+}
+
+@keyframes robotBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03) translateY(-4px); }
+}
+
+/* =========================================================
+   Authentic Interactive Spline 3D Viewer & Mascot Stage
+   ========================================================= */
+.btn-spline-toggle {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--panel-border);
+  border-radius: 9999px;
+  padding: 4px 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent-terracotta);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.btn-spline-toggle:hover {
+  background: var(--accent-terracotta);
+  color: #FFFFFF;
+  border-color: var(--accent-terracotta);
+}
+
+.custom-spline-drawer {
+  position: absolute;
+  top: 50px;
+  left: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--accent-terracotta);
+  border-radius: 12px;
+  padding: 8px 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 20;
+  box-shadow: 0 8px 24px rgba(224, 122, 95, 0.2);
+}
+
+.custom-spline-input {
+  flex: 1;
+  background: #FAF8F5;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-headline);
+  outline: none;
+}
+
+.custom-spline-input:focus {
+  border-color: var(--accent-terracotta);
+  background: #FFFFFF;
+}
+
+.btn-load-spline {
+  background: var(--accent-terracotta);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-load-spline:hover {
+  background: #cf694e;
+}
+
+.spline-3d-stage {
+  width: 100%;
+  height: 360px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.spline-3d-stage spline-viewer,
+#spline-robot {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 12px 24px rgba(41, 37, 36, 0.12));
+  min-height: 350px;
+  display: block;
+  border: none;
+  background: transparent;
 }
 
-.core-pulse-circle {
-  animation: corePulse 2s infinite ease-in-out;
+/* Watermark Removal */
+spline-viewer::part(logo),
+#spline-robot::part(logo),
+[part="logo"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
-@keyframes corePulse {
-  0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.15); opacity: 1; }
+/* Rep Action Animations on 3D Stage */
+.robot-viewer-wrapper.action-pushup-rep .spline-3d-stage {
+  animation: robotPushup var(--pacing-duration, 2.2s) cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-.visor-scan-beam {
-  animation: scanVisor 2.4s infinite ease-in-out alternate;
+.robot-viewer-wrapper.action-squat-rep .spline-3d-stage {
+  animation: robotSquat var(--pacing-duration, 2.2s) cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-@keyframes scanVisor {
-  0% { transform: translateX(-4px); }
-  100% { transform: translateX(4px); }
+.robot-viewer-wrapper.action-jump-rep .spline-3d-stage {
+  animation: robotJump 0.8s ease-in-out infinite;
+}
+
+.robot-viewer-wrapper.action-plank-hold .spline-3d-stage {
+  animation: robotPlank 2.5s ease-in-out infinite;
+}
+
+.robot-viewer-wrapper.action-rest-breathe .spline-3d-stage {
+  animation: robotBreathe 3.2s ease-in-out infinite;
+}
+
+/* =========================================================
+   VIRTUAL WORKOUT FORM DEMONSTRATION & VIDEO PLAYER
+   ========================================================= */
+.exercise-demo-container {
+  width: 100%;
+  margin: 0.85rem 0 1.25rem;
+}
+
+.visualizer-demo-card {
+  background: #FFFFFF;
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.demo-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+.demo-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.demo-pill-live {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: rgba(42, 157, 143, 0.1);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(42, 157, 143, 0.25);
+  letter-spacing: 0.03em;
+}
+
+.demo-pill-live.active {
+  background: rgba(224, 122, 95, 0.12);
+  color: var(--accent-terracotta);
+  border-color: rgba(224, 122, 95, 0.3);
+}
+
+.demo-pill-live.rest {
+  background: rgba(42, 157, 143, 0.15);
+  color: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+}
+
+.demo-pill-live.paused {
+  background: rgba(212, 163, 115, 0.15);
+  color: var(--accent-gold);
+  border-color: var(--accent-gold);
+}
+
+.demo-pill-live.victory {
+  background: linear-gradient(135deg, rgba(224, 122, 95, 0.2), rgba(212, 163, 115, 0.2));
+  color: var(--accent-terracotta);
+}
+
+.demo-exercise-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-headline);
+}
+
+.demo-mode-switcher {
+  display: flex;
+  gap: 0.35rem;
+  background: #F8FAFC;
+  padding: 3px;
+  border-radius: 9999px;
+  border: 1px solid var(--panel-border);
+}
+
+.demo-mode-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 11px;
+  border-radius: 9999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.demo-mode-btn.active {
+  background: #FFFFFF;
+  color: var(--text-headline);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.demo-stage-arena {
+  width: 100%;
+  min-height: 220px;
+  background: radial-gradient(circle at center, #FFFFFF 0%, #FAF8F5 100%);
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  overflow: hidden;
+  position: relative;
+}
+
+.sim-svg-wrapper {
+  width: 100%;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sim-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Mode 2: Video & Form Masterclass */
+.tutorial-card-body {
+  padding: 1rem;
+}
+
+.tut-masterclass-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tut-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tut-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent-terracotta);
+  background: rgba(224, 122, 95, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.tut-focus {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.tut-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-headline);
+}
+
+.tut-steps-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+@media (max-width: 640px) {
+  .tut-steps-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tut-step-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: #F8FAFC;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+}
+
+.tut-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  color: #FFFFFF;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tut-step-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-headline);
+}
+
+.tut-step-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.tut-action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.7);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tut-badge-pro {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-emerald);
+}
+
+.btn-listen-form {
+  background: var(--accent-terracotta);
+  color: #FFFFFF;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-listen-form:hover {
+  background: #C8654B;
+  transform: translateY(-1px);
+}
+
+/* Stage Bottom Telemetry Cues */
+.demo-footer-cues {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .demo-footer-cues {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cue-box {
+  background: #F8FAFC;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cue-box-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cue-box-val {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-headline);
+  line-height: 1.35;
 }
 
 /* Suppress Built-in Spline Watermark / Logo / Link */

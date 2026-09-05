@@ -8,9 +8,17 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: false,
+  maxAge: 0,
+  setHeaders: (res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  }
+}));
 
 const GEMINI_API_URL = process.env.GEMINI_WEB2API_URL || 'http://localhost:8081/v1';
+const GEMINI_DIRECT_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_DIRECT_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 // Config check endpoint
 app.get('/api/config', async (req, res) => {
@@ -64,37 +72,46 @@ RULES:
    - For Jumping Jacks / Climbers: Advise staying springy on balls of feet with controlled breath.
 4. Output ONLY clean text for TTS to speak. NEVER use markdown, bullet points, asterisks, image tags, or emojis.`;
 
-  try {
-    // Attempt call to gemini-web2api (OpenAI-compatible format on port 8081)
-    const geminiRes = await fetch(`${GEMINI_API_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer sk-gemini'
-      },
-      body: JSON.stringify({
-        model: 'gemini-3.6-flash',
-        messages: [
-          { role: 'system', content: systemMessage },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.4,
-        max_tokens: 80
-      }),
-      signal: AbortSignal.timeout(10000)
-    });
-
-    if (geminiRes.ok) {
-      const data = await geminiRes.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
-      if (reply) {
-        // Clean out any accidental markdown, HTML/Image tags, or quotes
-        const cleanReply = reply
-          .replace(/<[^>]*>/g, '')
-          .replace(/[*_#`]/g, '')
-          .replace(/\s+/g, ' ')
-          .trim();
-        return res.json({ reply: cleanReply, source: 'gemini-brain' });
+    try {
+    if (GEMINI_DIRECT_API_KEY) {
+      // Direct Gemini REST API (fastest path — no local proxy hop)
+      const geminiRes = await fetch(`${GEMINI_DIRECT_URL}?key=${GEMINI_DIRECT_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${systemMessage}\n\nUser: ${prompt}` }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 80 }
+        }),
+        signal: AbortSignal.timeout(2000)
+      });
+      if (geminiRes.ok) {
+        const data = await geminiRes.json();
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (reply) {
+          const cleanReply = reply.replace(/<[^>]*>/g, '').replace(/[*_#`]/g, '').replace(/\s+/g, ' ').trim();
+          return res.json({ reply: cleanReply, source: 'gemini-direct' });
+        }
+      }
+    } else {
+      // Fallback: web2api proxy on port 8081
+      const geminiRes = await fetch(`${GEMINI_API_URL}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer sk-gemini' },
+        body: JSON.stringify({
+          model: 'gemini-3.6-flash',
+          messages: [{ role: 'system', content: systemMessage }, { role: 'user', content: prompt }],
+          temperature: 0.4,
+          max_tokens: 80
+        }),
+        signal: AbortSignal.timeout(2500)
+      });
+      if (geminiRes.ok) {
+        const data = await geminiRes.json();
+        const reply = data.choices?.[0]?.message?.content?.trim();
+        if (reply) {
+          const cleanReply = reply.replace(/<[^>]*>/g, '').replace(/[*_#`]/g, '').replace(/\s+/g, ' ').trim();
+          return res.json({ reply: cleanReply, source: 'gemini-brain' });
+        }
       }
     }
   } catch (err) {
@@ -103,26 +120,75 @@ RULES:
 
   // Fast athletic coach biomechanics engine for instantaneous spoken feedback
   const lower = prompt.toLowerCase();
+  const ex = currentExercise.toLowerCase();
   let fallbackReply = "Keep your core braced tight and maintain full control through every rep!";
 
-  if (lower.includes('elbow') || lower.includes('arm')) {
+  if (lower.includes('elbow') && (lower.includes('flare') || lower.includes('out') || lower.includes('wide'))) {
+    fallbackReply = "Tuck your elbows to forty-five degrees and screw your palms into the floor. Never let them flare out to the sides.";
+  } else if (lower.includes('elbow') || (lower.includes('arm') && lower.includes('hurt'))) {
     fallbackReply = "Tuck your elbows to forty-five degrees and engage your chest. Avoid flaring elbows out wide.";
+  } else if (lower.includes('wrist') || lower.includes('wrists')) {
+    fallbackReply = "Spread your fingers wide and press through all five knuckles to distribute wrist load. Keep wrists stacked under your shoulders.";
+  } else if (lower.includes('shoulder') || lower.includes('shoulders')) {
+    fallbackReply = "Pull your shoulder blades down and back before each rep. This protects the rotator cuff and adds power.";
+  } else if (lower.includes('knee') || lower.includes('knees')) {
+    fallbackReply = "Track your knees out over your pinky toes, load through your heels, and keep your shins as vertical as possible.";
+  } else if (lower.includes('back') && (lower.includes('lower') || lower.includes('hurts') || lower.includes('pain'))) {
+    fallbackReply = "Brace your core like you're about to take a punch and tuck your pelvis slightly. Never let your hips sag or pike.";
   } else if (lower.includes('form') || lower.includes('technique') || lower.includes('doing') || lower.includes('correct') || lower.includes('right')) {
-    if (currentExercise.toLowerCase().includes('push')) {
-      fallbackReply = "Tuck your elbows to forty-five degrees, squeeze your glutes, and touch your chest to the floor every rep.";
-    } else if (currentExercise.toLowerCase().includes('squat')) {
-      fallbackReply = "Keep your chest high, drive your knees outward over your toes, and press through your heels.";
-    } else if (currentExercise.toLowerCase().includes('plank')) {
-      fallbackReply = "Brace your abs like taking a punch. Don't let your lower back sag, keep a straight line neck to heel.";
+    if (ex.includes('diamond')) {
+      fallbackReply = "Diamond push-ups: join thumbs and index fingers under your chest. Elbows tight to your ribs, full chest-to-floor range.";
+    } else if (ex.includes('push')) {
+      fallbackReply = "Tuck elbows forty-five degrees, squeeze glutes, brace abs, and touch your chest to the floor every single rep.";
+    } else if (ex.includes('squat')) {
+      fallbackReply = "Chest high, knees out, break at hips first, drive through your heels to full lockout at the top.";
+    } else if (ex.includes('plank')) {
+      fallbackReply = "Brace abs like taking a punch. Squeeze glutes hard, neutral spine. Don't let your hips pike or sag.";
+    } else if (ex.includes('dip')) {
+      fallbackReply = "Grip the edge, back grazing the bench, lower to ninety degree elbow bend, press through triceps to full extension.";
+    } else if (ex.includes('lunge')) {
+      fallbackReply = "Step forward, lower your rear knee toward the floor, keep front shin vertical, and drive through your front heel to return.";
+    } else if (ex.includes('pike')) {
+      fallbackReply = "Hips high in a V, lower your crown between your hands, then press hard through your shoulders.";
+    } else if (ex.includes('mountain') || ex.includes('climber')) {
+      fallbackReply = "Stable plank position, drive each knee explosively to your chest alternately, keep your hips level throughout.";
     } else {
-      fallbackReply = "Keep your chest tall, core engaged, and focus on clean control over speed. You've got this!";
+      fallbackReply = "Keep your chest tall, core engaged, and focus on clean control over speed. Quality beats quantity every time.";
     }
-  } else if (lower.includes('pain') || lower.includes('hurt') || lower.includes('dizzy') || lower.includes('bad') || lower.includes('sick')) {
-    fallbackReply = "Safety first. Take a deep breath, shake it out, and take a quick rest until you feel completely ready.";
-  } else if (lower.includes('breathe') || lower.includes('breath')) {
-    fallbackReply = "Inhale deep through your nose on the eccentric, and exhale with power as you push through the rep!";
-  } else if (lower.includes('motivat') || lower.includes('tired') || lower.includes('cant') || lower.includes("can't")) {
-    fallbackReply = "This is where champions are built. You've got more in the tank than you think, let's finish strong!";
+  } else if (lower.includes('intense') || lower.includes('harder') || lower.includes('more') || lower.includes('difficult')) {
+    fallbackReply = "Add a two-second pause at the bottom of each rep. That eccentric load will torch your muscles twice as hard!";
+  } else if (lower.includes('easy') || lower.includes('too easy') || lower.includes('not hard enough')) {
+    fallbackReply = "Increase your tempo on the way up and slow down for three counts on the way down. Make every rep earn its place.";
+  } else if (lower.includes('pain') || lower.includes('hurt') || lower.includes('dizzy') || lower.includes('bad') || lower.includes('sick') || lower.includes('nauseous')) {
+    fallbackReply = "Safety first. Take a deep breath, shake it out, and rest until you feel completely ready. Never push through sharp pain.";
+  } else if (lower.includes('breathe') || lower.includes('breath') || lower.includes('breathing')) {
+    fallbackReply = "Inhale deep through your nose on the way down, and exhale powerfully through your mouth as you push up. Rhythm is everything.";
+  } else if (lower.includes('motivat') || lower.includes('tired') || lower.includes('cant') || lower.includes("can't") || lower.includes('give up') || lower.includes('quit')) {
+    fallbackReply = "This is exactly where champions are forged. Your body can handle more than your mind thinks. Last few reps, let's finish strong!";
+  } else if (lower.includes('rep') || lower.includes('reps') || lower.includes('how many')) {
+    fallbackReply = `You're on set ${currentSet}. Focus on one rep at a time. Full range, full control. You've got this!`;
+  } else if (lower.includes('rest') || lower.includes('break') || lower.includes('recover')) {
+    fallbackReply = "Use your rest to shake out your arms, control your breathing, and mentally prepare for the next set. Rest is part of training.";
+  } else if (lower.includes('water') || lower.includes('drink') || lower.includes('thirsty')) {
+    fallbackReply = "Hydration is critical for performance. Drink now, rehydrate well, and say start or resume when you're ready to crush it.";
+  } else if (lower.includes('warm') || lower.includes('warmup') || lower.includes('warm up')) {
+    fallbackReply = "Do ten arm circles each direction and five deep bodyweight squats to prime your joints before the working sets.";
+  } else if (lower.includes('muscle') || lower.includes('working') || lower.includes('what muscle')) {
+    if (ex.includes('push') || ex.includes('diamond')) {
+      fallbackReply = "Push-ups work chest, triceps, and front deltoids as primary movers, with your core stabilizing throughout.";
+    } else if (ex.includes('squat') || ex.includes('lunge')) {
+      fallbackReply = "Squats target quads, glutes, and hamstrings as primary movers, plus your core and spinal erectors to stabilize.";
+    } else if (ex.includes('plank') || ex.includes('climber')) {
+      fallbackReply = "This exercise targets your entire core — abs, obliques, lower back, and glutes — all working simultaneously.";
+    } else if (ex.includes('dip') || ex.includes('pike')) {
+      fallbackReply = "This targets your triceps and anterior deltoids as primary movers, with chest as a secondary synergist.";
+    } else {
+      fallbackReply = "Stay focused on the primary muscles. Mind-muscle connection amplifies every single rep.";
+    }
+  } else if (lower.includes('good') || lower.includes('great') || lower.includes('feeling good') || lower.includes('amazing')) {
+    fallbackReply = "Love that energy! Channel it into every rep. Let's make this set your best set of the day!";
+  } else if (lower.includes('slow') || lower.includes('slower') || lower.includes('fast') || lower.includes('faster') || lower.includes('tempo')) {
+    fallbackReply = "Control the tempo: three counts down, explosive push up. Slow negatives build more muscle than going fast.";
   }
 
   return res.json({ reply: fallbackReply, source: 'athletic-biomechanics' });
@@ -265,10 +331,10 @@ app.post('/api/intent-ai', async (req, res) => {
 
   // 5. START command (Immediate start / begin / start the gym / let's go)
   if (
-    lower.includes('start the gym') || lower.includes('start workout') || lower.includes('start now') ||
+    lower.includes('start the gym') || lower.includes('start workout') || lower.includes('starts now') || lower.includes('start now') ||
     lower.includes('lets start') || lower.includes("let's start") || lower.includes('lets go') ||
     lower.includes("let's go") || lower.includes('begin') || lower.includes('get started') ||
-    lower.includes('hit it') || lower.includes('go for instant') || lower === 'start' || lower.startsWith('start ')
+    lower.includes('hit it') || lower.includes('go for instant') || lower === 'start' || lower.startsWith('start ') || lower === 'starts'
   ) {
     return res.json({
       action: 'START',
@@ -295,7 +361,12 @@ app.post('/api/intent-ai', async (req, res) => {
     lower.includes('hol on') || lower.includes('gimme a sec') || lower.includes('gimme a min') ||
     lower.includes('wait up') || lower.includes('chill') || lower.includes('time out') ||
     lower.includes('take a break') || lower.includes('let me breathe') ||
-    lower.includes('dying') || lower.includes('stop') || lower.includes('pause')
+    lower.includes('dying') || lower.includes('stop') || lower.includes('pause') ||
+    lower === 'top' || lower.startsWith('top ') || lower.endsWith(' top') ||
+    lower.includes(' stock') || lower === 'stock' || lower.startsWith('stock ') ||
+    lower.includes(' stalk') || lower === 'stalk' || lower === 'shop' ||
+    lower.includes(' spot') || lower === 'spot' || lower.includes(' stuck') || lower === 'stuck' ||
+    lower.includes('stopped') || lower.includes('stopping') || lower === 'drop' || lower.includes('break')
   ) {
     return res.json({
       action: 'PAUSE',
@@ -381,7 +452,7 @@ app.post('/api/intent-ai', async (req, res) => {
     });
   }
 
-  // 12. Gemini LLM Classification for open-ended questions
+  // 12. Gemini LLM Classification for open-ended questions (direct REST API — fastest path)
   try {
     const promptSystem = `You are Coach Celeste, the voice gym coach AI brain.
 Current Exercise: ${workoutContext.exerciseName || 'Push-ups'}, Set ${workoutContext.set || 1}, State: ${workoutContext.state || 'ACTIVE'}.
@@ -389,36 +460,62 @@ User utterance: "${raw}".
 Classify user's intent into ONE action:
 - "START", "PAUSE", "RESUME", "SKIP_REST", "ADD_REST", "SWITCH_ROUTINE", "TEACH_EXERCISE", or "COACH_ADVICE".
 If SWITCH_ROUTINE, include parameter: "triceps" | "legs" | "chest" | "core" | "shoulders" | "full_body".
-Respond strictly with valid JSON:
+Respond ONLY with valid JSON (no markdown, no explanation):
 {"action": "...", "parameter": "optional_parameter", "spokenFeedback": "Direct, punchy spoken coach response under 20 words"}`;
 
-    const geminiRes = await fetch(`${GEMINI_API_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer sk-gemini'
-      },
-      body: JSON.stringify({
-        model: 'gemini-3.6-flash',
-        messages: [{ role: 'system', content: promptSystem }],
-        temperature: 0.2,
-        max_tokens: 80
-      }),
-      signal: AbortSignal.timeout(8000)
-    });
-
-    if (geminiRes.ok) {
-      const data = await geminiRes.json();
-      const content = data.choices?.[0]?.message?.content?.trim();
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return res.json({
-          action: parsed.action || 'COACH_ADVICE',
-          parameter: parsed.parameter || null,
-          spokenFeedback: parsed.spokenFeedback || 'Stay focused and keep pushing!',
-          source: 'gemini-brain'
-        });
+    if (GEMINI_DIRECT_API_KEY) {
+      // Direct Gemini REST API — fastest path
+      const geminiRes = await fetch(`${GEMINI_DIRECT_URL}?key=${GEMINI_DIRECT_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptSystem }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 100 }
+        }),
+        signal: AbortSignal.timeout(3000)
+      });
+      if (geminiRes.ok) {
+        const data = await geminiRes.json();
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (content) {
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            return res.json({
+              action: parsed.action || 'COACH_ADVICE',
+              parameter: parsed.parameter || null,
+              spokenFeedback: parsed.spokenFeedback || 'Stay focused and keep pushing!',
+              source: 'gemini-direct'
+            });
+          }
+        }
+      }
+    } else {
+      // Fallback: web2api proxy
+      const geminiRes = await fetch(`${GEMINI_API_URL}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer sk-gemini' },
+        body: JSON.stringify({
+          model: 'gemini-3.6-flash',
+          messages: [{ role: 'system', content: promptSystem }],
+          temperature: 0.2,
+          max_tokens: 80
+        }),
+        signal: AbortSignal.timeout(1800)
+      });
+      if (geminiRes.ok) {
+        const data = await geminiRes.json();
+        const content = data.choices?.[0]?.message?.content?.trim();
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return res.json({
+            action: parsed.action || 'COACH_ADVICE',
+            parameter: parsed.parameter || null,
+            spokenFeedback: parsed.spokenFeedback || 'Stay focused and keep pushing!',
+            source: 'gemini-brain'
+          });
+        }
       }
     }
   } catch (err) {}

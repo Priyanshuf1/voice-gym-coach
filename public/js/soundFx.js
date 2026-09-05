@@ -123,6 +123,58 @@ export class SoundFX {
   }
 
   /**
+   * Ascending celebration chime (set complete)
+   */
+  playSetComplete() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t + i * 0.08);
+
+      gain.gain.setValueAtTime(0.3, t + i * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.35);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(t + i * 0.08);
+      osc.stop(t + i * 0.08 + 0.35);
+    });
+  }
+
+  /**
+   * Grand triumphant fanfare (workout victory)
+   */
+  playWorkoutVictory() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    [440, 554.37, 659.25, 880].forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + i * 0.1);
+
+      gain.gain.setValueAtTime(0.35, t + i * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.1 + 0.8);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(t + i * 0.1);
+      osc.stop(t + i * 0.1 + 0.8);
+    });
+  }
+
+  /**
    * Barge-in glitch / instant whoosh sweep
    */
   playBargeInGlitch() {

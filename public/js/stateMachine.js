@@ -187,11 +187,21 @@ export class WorkoutStateMachine {
   startRepCycle() {
     this.clearAllTimers();
     this.state = STATES.EXERCISE_REPS;
-    this.currentRep = 0;
+    this.currentRep = 0; // Explicitly reset to 0
     this.isRepLoopActive = true;
-    this.notifyState();
+    this.notifyState(); // Updates HUD to display: SET X OF Y, 0 OF 8 REPS
 
-    this.loopNextRep();
+    // Verbal cue for set start, then count rep 1 after short pause
+    if (this.currentSet > 1) {
+      this.audio.speak(`Set ${this.currentSet}! Starting in three, two, one, go!`, true);
+      this.repTimeout = setTimeout(() => {
+        this.loopNextRep();
+      }, 1600);
+    } else {
+      this.repTimeout = setTimeout(() => {
+        this.loopNextRep();
+      }, 1000);
+    }
   }
 
   async loopNextRep() {
@@ -210,6 +220,9 @@ export class WorkoutStateMachine {
 
     await this.audio.speak(spokenText);
 
+    // Double-check if state was paused or changed while coach was speaking
+    if (!this.isRepLoopActive || this.state !== STATES.EXERCISE_REPS) return;
+
     if (this.currentRep >= this.currentExercise.reps) {
       this.completeSet();
     } else {
@@ -223,49 +236,70 @@ export class WorkoutStateMachine {
     this.clearAllTimers();
     this.soundFx.playSetComplete();
 
-    if (this.currentSet < this.currentExercise.sets) {
-      this.startRestTimer(this.currentExercise.restSeconds || 30);
+    const currentEx = this.currentExercise;
+    const isLastSet = this.currentSet >= (currentEx.sets || 3);
+
+    // Immediately reset currentRep to 0 so HUD shows 0 reps for the upcoming set
+    this.currentRep = 0;
+
+    if (!isLastSet) {
+      // Resting between sets of current exercise
+      const nextSetNum = this.currentSet + 1;
+      const restSec = 15; // Crisp 15s rest between sets
+      this.onLog(`✅ Set ${this.currentSet} of ${currentEx.sets || 3} complete! Rest for ${restSec}s before Set ${nextSetNum}.`, 'success');
+      this.audio.speak(`Set ${this.currentSet} complete! Take a fifteen second breather. Set ${nextSetNum} starts automatically.`, true);
+      this.startRestTimer(restSec, false);
     } else {
+      // All sets complete for this exercise! Move to next exercise or finish workout
       if (this.exerciseIndex < this.currentPlan.length - 1) {
         this.exerciseIndex++;
         this.currentSet = 1;
         this.currentRep = 0;
-        this.startRestTimer(40);
-        this.audio.speak(`Exercise finished! Up next is ${this.currentExercise.name}. Rest for 40 seconds.`);
+        const nextEx = this.currentExercise;
+        const restSec = 20; // 20s transition rest between different exercises
+        this.onLog(`🎉 ${currentEx.name} finished! Up next: ${nextEx.name}.`, 'success');
+        this.audio.speak(`${currentEx.name} crushed! Next up is ${nextEx.name}. Rest for twenty seconds.`, true);
+        this.startRestTimer(restSec, true);
       } else {
+        // Complete routine!
         this.state = STATES.COMPLETED;
         this.notifyState();
         this.soundFx.playWorkoutVictory();
-        this.onLog('🏆 Workout complete! Incredible effort today.', 'success');
-        this.audio.speak("Workout complete! Outstanding effort today. Take a cooldown and rehydrate!");
+        this.onLog('🏆 Full Workout Complete! You crushed every set and rep!', 'success');
+        this.audio.speak("Workout complete! Outstanding performance today, athlete. Rehydrate and recover!", true);
       }
     }
   }
 
-  startRestTimer(seconds) {
+  startRestTimer(seconds, isNewExercise = false) {
     this.clearAllTimers();
     this.state = STATES.REST_TIMER;
     this.totalRestTime = seconds;
     this.restTimeRemaining = seconds;
+    this.isNextExerciseTransition = isNewExercise;
     this.notifyState();
-
-    this.audio.speak(`Rest for ${seconds} seconds.`);
 
     this.restInterval = setInterval(() => {
       this.restTimeRemaining--;
       this.onTick(this.getContext());
 
-      if (this.restTimeRemaining === 10) {
-        this.audio.speak("Ten seconds left. Shake out your muscles and get into position.");
+      if (this.restTimeRemaining === 8) {
+        if (this.isNextExerciseTransition) {
+          this.audio.speak(`Get ready for ${this.currentExercise.name}. Set one starting shortly.`);
+        } else {
+          this.audio.speak(`Get ready for set ${this.currentSet + 1}.`);
+        }
       } else if (this.restTimeRemaining === 3) {
         this.audio.speak("Three");
       } else if (this.restTimeRemaining === 2) {
         this.audio.speak("Two");
       } else if (this.restTimeRemaining === 1) {
-        this.audio.speak("One");
+        this.audio.speak("One, let's go!");
       } else if (this.restTimeRemaining <= 0) {
         this.clearAllTimers();
-        this.currentSet++;
+        if (!this.isNextExerciseTransition) {
+          this.currentSet++;
+        }
         this.startRepCycle();
       }
     }, 1000);
@@ -275,8 +309,10 @@ export class WorkoutStateMachine {
     if (this.state !== STATES.REST_TIMER) return;
     this.clearAllTimers();
     this.onLog('⏭️ Rest timer skipped via voice command.', 'info');
-    this.audio.speak("Skipping rest! Next set starts now.", true);
-    this.currentSet++;
+    if (!this.isNextExerciseTransition) {
+      this.currentSet++;
+    }
+    this.audio.speak(`Skipping rest! Set ${this.currentSet} starts now.`, true);
     this.startRepCycle();
   }
 

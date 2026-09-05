@@ -24,9 +24,83 @@ export class VoiceListener {
     this.shouldRestart = true;
     this.hasSupport = false;
     this.lastProcessedText = '';
+    this.lastCommandName = '';
+    this.lastCommandTime = 0;
     this.silenceTimer = null;
+    this.currentTurnHandled = false;
+    this.turnCooldownTimer = null;
 
     this.initRecognition();
+  }
+
+  isSelfEcho(text) {
+    if (!text) return false;
+    const clean = text.toLowerCase().trim();
+    if (!clean) return false;
+
+    // Check if coach is actively speaking or finished less than 1200ms ago
+    const isCoachActive = window.__isCoachSpeaking || (Date.now() - (window.__coachSpeechEndedAt || 0) < 1200);
+    if (!isCoachActive) return false;
+
+    // Check for explicit user barge-in single words: "stop", "pause", "water", "wait"
+    // The coach never says a bare single word "stop" while talking.
+    const isExplicitHalt = /^(stop|pause|paws|top|stock|stalk|spot|stuck|water|hold on|wait|chill|freeze|shut up)$/i.test(clean);
+    if (isExplicitHalt) {
+      return false; // User is legitimately barging in!
+    }
+
+    // Check against coach's recent spoken phrases
+    const recent = window.__recentCoachUtterances || [];
+    if (window.__lastCoachSpeech) {
+      recent.unshift(window.__lastCoachSpeech);
+    }
+
+    for (const phrase of recent) {
+      if (!phrase) continue;
+      if (phrase.includes(clean) || clean.includes(phrase)) {
+        return true;
+      }
+      const words = clean.split(/\s+/).filter(w => w.length > 2);
+      if (words.length > 0) {
+        let matchCount = 0;
+        for (const w of words) {
+          if (phrase.includes(w)) matchCount++;
+        }
+        if (matchCount / words.length >= 0.4) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  safeDispatchCommand(command, text, subReason) {
+    const now = Date.now();
+
+    // 1. If acoustic echo from device speaker, suppress immediately
+    if (this.isSelfEcho(text)) {
+      console.log(`[VoiceListener] Acoustic echo suppressed for command "${command}": "${text}"`);
+      return true;
+    }
+
+    // 2. If coach is speaking, ONLY emergency PAUSE is allowed to barge-in
+    if (window.__isCoachSpeaking && command !== 'PAUSE') {
+      console.log(`[VoiceListener] Blocked non-pause command "${command}" during coach speech`);
+      return true;
+    }
+
+    // 3. Deduplicate rapid identical commands within 2000ms
+    if (this.lastCommandName === command && (now - this.lastCommandTime) < 2000) {
+      console.log(`[VoiceListener] Deduplicated duplicate command "${command}" within 2000ms`);
+      return true;
+    }
+
+    this.lastCommandName = command;
+    this.lastCommandTime = now;
+    this.lastProcessedText = text;
+    this.onCommand(command, text, subReason);
+    return true;
   }
 
   initRecognition() {
@@ -45,6 +119,7 @@ export class VoiceListener {
     rec.continuous = true;
     rec.interimResults = true;
     rec.lang = 'en-US';
+    rec.maxAlternatives = 1;
 
     // 1. Acoustic speech detection (Fastest possible barge-in signal: <1ms)
     rec.onspeechstart = () => {
@@ -56,7 +131,7 @@ export class VoiceListener {
       this.onStatusChange('LISTENING');
     };
 
-    // 2. Real-time Transcript Stream
+    // 2. Real-time Transcript Stream (<10ms Turnaround)
     rec.onresult = (event) => {
       let interimTranscript = '';
       let finalTranscript = '';
@@ -75,17 +150,27 @@ export class VoiceListener {
       const activeText = (finalTranscript || interimTranscript).trim();
       if (!activeText) return;
 
-      this.onInterim(activeText);
-
-      // Fast-path: Check for immediate command trigger (stop, skip, pause)
-      const handledFast = this.checkFastCommands(activeText);
-      if (handledFast) {
-        this.lastProcessedText = activeText;
+      // 1. Check acoustic echo from coach speech
+      if (this.isSelfEcho(activeText)) {
+        console.log(`[VoiceListener] Acoustic speaker echo suppressed: "${activeText}"`);
         return;
       }
 
-      // If user spoke a complete thought (isFinal) or pauses for 700ms, forward to conversational AI
-      if (finalTranscript) {
+      // Update live spoken display
+      this.onInterim(activeText);
+
+      // 2. Fast-path: Check for immediate safety / emergency command (<5ms)
+      const handledFast = this.checkFastCommands(activeText);
+      if (handledFast) {
+        clearTimeout(this.silenceTimer);
+        return;
+      }
+
+      // 3. Conversational Speech & Full Utterances:
+      // Wait for complete sentence (isFinal) or generous trailing silence (1100ms)
+      // NEVER prematurely chop into tiny 180ms word fragments!
+      if (finalTranscript.trim()) {
+        clearTimeout(this.silenceTimer);
         this.dispatchFullUtterance(finalTranscript.trim());
       } else {
         clearTimeout(this.silenceTimer);
@@ -93,7 +178,7 @@ export class VoiceListener {
           if (activeText && activeText !== this.lastProcessedText) {
             this.dispatchFullUtterance(activeText);
           }
-        }, 750);
+        }, 1100);
       }
     };
 
@@ -112,7 +197,6 @@ export class VoiceListener {
     rec.onend = () => {
       this.isListening = false;
       if (this.shouldRestart) {
-        // Auto restart for continuous hands-free workout session
         try {
           rec.start();
           this.isListening = true;
@@ -126,10 +210,8 @@ export class VoiceListener {
                 this.onStatusChange('LISTENING');
               } catch (err) {}
             }
-          }, 350);
+          }, 300);
         }
-      } else {
-        this.onStatusChange('OFF');
       }
     };
 
@@ -154,10 +236,7 @@ export class VoiceListener {
       clean.includes('hydration') ||
       clean.includes('bottle')
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('PAUSE', text, 'WATER');
-      return true;
+      return this.safeDispatchCommand('PAUSE', text, 'WATER');
     }
 
     // 1. Rest / Catch Breath / Exhaustion (<1ms Instant Execution)
@@ -180,10 +259,7 @@ export class VoiceListener {
       clean.includes('wait a sec') ||
       clean.includes('wait up')
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('PAUSE', text, 'REST');
-      return true;
+      return this.safeDispatchCommand('PAUSE', text, 'REST');
     }
 
     // 2. Pain, Injury / Distress (<1ms Safety Pause)
@@ -194,12 +270,6 @@ export class VoiceListener {
       clean.includes('sprained') ||
       clean.includes('not feeling good') ||
       clean.includes('feel sick') ||
-      clean.includes('hurt') ||
-      clean.includes('hurts') ||
-      clean.includes('hurting') ||
-      clean.includes('pain') ||
-      clean.includes('elbow') ||
-      clean.includes('shoulder') ||
       clean.includes('knee') ||
       clean.includes('wrist') ||
       clean.includes('dizzy') ||
@@ -207,59 +277,41 @@ export class VoiceListener {
       clean.includes('cramp') ||
       clean.includes('clicking')
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
       const isInjured = clean.includes('hurt myself') || clean.includes('injured') || clean.includes('pulled a muscle');
-      this.onCommand('PAUSE', text, isInjured ? 'INJURY' : 'PAIN');
-      return true;
+      return this.safeDispatchCommand('PAUSE', text, isInjured ? 'INJURY' : 'PAIN');
     }
 
     // 2b. Dynamic Workout Routine Switching on the fly ("I want to do triceps now", "switch to legs")
     if (
       clean.includes('tricep') || clean.includes('triceps') || clean.includes('diamond push')
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('SWITCH_ROUTINE', text, 'triceps');
-      return true;
+      return this.safeDispatchCommand('SWITCH_ROUTINE', text, 'triceps');
     }
 
     if (
       clean.includes('legs') || clean.includes('leg day') || clean.includes('quads') || clean.includes('squats')
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('SWITCH_ROUTINE', text, 'legs');
-      return true;
+      return this.safeDispatchCommand('SWITCH_ROUTINE', text, 'legs');
     }
 
     if (
       clean.includes('chest') || clean.includes('pecs') || clean.includes('pushups') || clean.includes('push ups')
     ) {
       if (clean.includes('do chest') || clean.includes('want chest') || clean.includes('switch to chest') || clean.includes('chest blast')) {
-        this.lastProcessedText = clean;
-        setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-        this.onCommand('SWITCH_ROUTINE', text, 'chest');
-        return true;
+        return this.safeDispatchCommand('SWITCH_ROUTINE', text, 'chest');
       }
     }
 
     if (
       clean.includes('core') || clean.includes('abs') || clean.includes('abdominals')
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('SWITCH_ROUTINE', text, 'core');
-      return true;
+      return this.safeDispatchCommand('SWITCH_ROUTINE', text, 'core');
     }
 
     if (
       clean.includes('shoulders') || clean.includes('shoulder workout') || clean.includes('delts')
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('SWITCH_ROUTINE', text, 'shoulders');
-      return true;
+      return this.safeDispatchCommand('SWITCH_ROUTINE', text, 'shoulders');
     }
 
     // 2c. Spoken Form Coaching Masterclass ("Teach me what to do and how to do")
@@ -270,13 +322,11 @@ export class VoiceListener {
       clean.includes('explain form') ||
       clean.includes('what to do')
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('TEACH_EXERCISE', text);
-      return true;
+      return this.safeDispatchCommand('TEACH_EXERCISE', text);
     }
 
     // 3. Emergency Stop / General Immediate Pause (<1ms Cutoff)
+    // Includes phonetic mishearings: "top", "stock", "stalk", "shop", "spot", "stuck", "stopped", "stopping"
     if (
       clean.includes('stop') ||
       clean.includes('pause') ||
@@ -289,18 +339,35 @@ export class VoiceListener {
       clean.includes('shut up') ||
       clean.includes('freeze') ||
       clean.includes('halt') ||
-      clean.includes('hault')
+      clean.includes('hault') ||
+      clean === 'top' ||
+      clean.startsWith('top ') ||
+      clean.endsWith(' top') ||
+      clean.includes(' stock') ||
+      clean === 'stock' ||
+      clean.startsWith('stock ') ||
+      clean.includes(' stalk') ||
+      clean === 'stalk' ||
+      clean === 'shop' ||
+      clean.includes(' spot') ||
+      clean === 'spot' ||
+      clean.includes(' stuck') ||
+      clean === 'stuck' ||
+      clean.includes('stopped') ||
+      clean.includes('stopping') ||
+      clean === 'drop' ||
+      clean.includes('break') ||
+      clean.includes('time out') ||
+      clean.includes('timeout')
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('PAUSE', text, 'GENERAL');
-      return true;
+      return this.safeDispatchCommand('PAUSE', text, 'GENERAL');
     }
 
     // 4. Start Workout / Let's Go / Begin / Start the Gym
     if (
       clean.includes('start the gym') ||
       clean.includes('start workout') ||
+      clean.includes('starts now') ||
       clean.includes('start now') ||
       clean.includes('lets start') ||
       clean.includes("let's start") ||
@@ -311,12 +378,10 @@ export class VoiceListener {
       clean.includes('hit it') ||
       clean.includes('go for instant') ||
       clean === 'start' ||
-      clean.startsWith('start ')
+      clean.startsWith('start ') ||
+      clean === 'starts'
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('START', text);
-      return true;
+      return this.safeDispatchCommand('START', text);
     }
 
     // 5. Recovery / Resume: "okay now", "ready to go", "resume", "continue", "start again", "all good", "feeling good"
@@ -342,10 +407,7 @@ export class VoiceListener {
       clean.includes('keep going') ||
       clean.includes('back at it')
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('RESUME', text);
-      return true;
+      return this.safeDispatchCommand('RESUME', text);
     }
 
     // 6. Skip rest
@@ -363,26 +425,17 @@ export class VoiceListener {
       clean.includes('im ready') ||
       clean.includes('bring it on')
     ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('SKIP_REST', text);
-      return true;
+      return this.safeDispatchCommand('SKIP_REST', text);
     }
 
     // 7. Add rest
     if (clean.includes('add 10') || clean.includes('add ten') || clean.includes('more time') || clean.includes('more rest') || clean.includes('longer rest')) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('ADD_REST', text);
-      return true;
+      return this.safeDispatchCommand('ADD_REST', text);
     }
 
     // 8. Next Exercise
     if (clean.includes('next exercise') || clean.includes('skip exercise') || clean.includes('different exercise') || clean.includes('switch exercise')) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('NEXT_EXERCISE', text);
-      return true;
+      return this.safeDispatchCommand('NEXT_EXERCISE', text);
     }
 
     return false;
@@ -390,12 +443,43 @@ export class VoiceListener {
 
   /**
    * Dispatch full conversational speech to the AI backend
-   * (Allows user to talk freely without word limits)
+   * (Allows user to talk freely without word limits or premature chopping)
    */
   dispatchFullUtterance(text) {
-    if (!text || text === this.lastProcessedText) return;
-    this.lastProcessedText = text;
-    this.onCommand('', text);
+    if (!text) return;
+    const clean = text.trim();
+    if (!clean || clean === this.lastProcessedText) return;
+
+    // Check echo suppression
+    if (this.isSelfEcho(clean)) {
+      console.log(`[VoiceListener] Echo suppressed in dispatchFullUtterance: "${clean}"`);
+      return;
+    }
+
+    // Ignore commands if coach is currently speaking
+    if (window.__isCoachSpeaking) {
+      console.log(`[VoiceListener] Ignored full utterance while coach is speaking: "${clean}"`);
+      return;
+    }
+
+    // Filter out isolated single incomplete tokens (e.g. "I", "the", "a", "so", "um", "uh")
+    // Unless it's a known single-word command
+    const words = clean.split(/\s+/);
+    if (words.length === 1) {
+      const w = words[0].toLowerCase();
+      const validSingles = [
+        'start', 'stop', 'pause', 'resume', 'skip', 'water',
+        'top', 'stock', 'stalk', 'spot', 'halt', 'break',
+        'legs', 'core', 'chest', 'triceps', 'shoulders', 'pushups', 'squats'
+      ];
+      if (!validSingles.includes(w)) {
+        console.log(`[VoiceListener] Incomplete single-word fragment ignored: "${clean}"`);
+        return;
+      }
+    }
+
+    this.lastProcessedText = clean;
+    this.onCommand('', clean);
   }
 
   start() {
