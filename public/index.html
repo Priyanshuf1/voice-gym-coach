@@ -7,7 +7,9 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Orbitron Font for Cyber Ronin Heading -->
+  <link href="https://db.onlinewebfonts.com/c/b1314443e183d1cdd77049077c46facc?family=Orbitron-Medium" rel="stylesheet">
   <!-- Spline 3D Viewer Web Component -->
   <script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.72/build/spline-viewer.js"></script>
 </head>
@@ -25,6 +27,12 @@
 
     <div class="header-right">
       <div class="badge-group">
+        <!-- Live Hands-Free Mic Toggle Button -->
+        <button id="btn-mic-toggle" class="btn-mic-header" title="Toggle Hands-Free Microphone">
+          <span class="pulse-dot"></span>
+          <span id="btn-mic-text">🎙️ Start Hands-Free Mic</span>
+        </button>
+
         <!-- Rime TTS Status -->
         <div id="engine-status" class="engine-status-badge">
           <span class="pulse-dot"></span>
@@ -46,43 +54,130 @@
     </div>
   </header>
 
-  <!-- Hero Section (Rabto Modern Startup Aesthetic) -->
-  <section class="hero-section">
-    <div class="hero-left">
-      <div class="hero-pill-badge">
-        <span>✨</span> Hands-Free AI Athlete Experience
-      </div>
-      <h2 class="hero-title">The AI Gym Coach That Listens <span>Mid-Rep —</span></h2>
-      <p class="hero-subtitle">
-        Hands busy. Sweaty palms. Eyes off screen. Instant &lt;50ms hardware barge-in interruption powered by Rime.ai Coda &amp; conversational athletic intelligence.
-      </p>
-      <div class="hero-cta-row">
-        <a href="#workout-hud" class="btn-hero primary">⚡ Jump To Workout HUD</a>
-        <a href="#pronunciation-lab" class="btn-hero secondary">🔬 Pronunciation Lab</a>
-      </div>
+  <!-- CYBER RONIN HERO SECTION (User Exact Specification with Cursor Spotlight) -->
+  <main class="hero cyber-ronin-hero">
+
+    <!-- 1. BASE Hero Image Layer (Day/Normal Scene) -->
+    <div class="hero-base-img hero-image-animate"
+         style="background-image: url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260831_115955_2a9adb39-5e9b-4ced-96e2-6900eabe3de9.png&w=1920&q=85');">
     </div>
 
-    <!-- Interactive 3D Robot Experience with Real-Time Workout Actions -->
-    <div class="hero-robot-container" id="robot-container">
-      <div id="robot-aura" class="robot-aura"></div>
-      <div class="robot-status-overlay">
-        <div id="robot-action-badge" class="robot-action-badge">
-          <span class="robot-action-dot"></span>
-          <span id="robot-action-text">Coach Standing By</span>
-        </div>
-        <div id="robot-exercise-indicator" class="robot-exercise-tag">Idle</div>
-      </div>
-      <div class="robot-viewer-wrapper" id="robot-wrapper">
-        <spline-viewer id="spline-robot" loading-anim-type="spinner-small-dark" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
-      </div>
+    <!-- 2. REVEAL Hero Image Layer (Spotlight Masked Scene) -->
+    <div class="hero-reveal-img" id="reveal-img"
+         style="background-image: url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260831_123709_183f0065-efb2-4bb2-a849-13aaa5af2f3f.png&w=1920&q=85');">
     </div>
-  </section>
+
+    <!-- 3. Page Counter Floating Indicator -->
+    <div class="hero-page fade-up-reveal" data-delay="0.75">1/26</div>
+
+    <!-- 4. Hero UI Interactive Overlay -->
+    <div class="hero-ui">
+
+      <!-- Left Column: Copy, Action Icons & Product Card -->
+      <div class="hero-left">
+
+        <div class="hero-copy">
+          <h1 class="words-pull-up">
+            <span>RONIN-X //</span>
+            <span>SHADOW</span>
+            <span>NIGHTFALL</span>
+          </h1>
+
+          <p class="fade-up-reveal" data-delay="0.5">
+            Cultivated with high-res optics and a zero-gravity frame for those who don't just watch the future—they wield it. Shift your reality.
+          </p>
+
+          <div class="icon-row fade-up-reveal" data-delay="0.65">
+            <!-- Icon 1: Main Core -->
+            <button class="icon-btn" aria-label="Main core">
+              <svg viewBox="0 0 16 16">
+                <path d="M8 1.4L13.8 4.7V11.3L8 14.6L2.2 11.3V4.7L8 1.4Z"></path>
+                <circle cx="8" cy="8" r="1.35" fill="currentColor"></circle>
+              </svg>
+            </button>
+
+            <!-- Icon 2: Vision -->
+            <button class="icon-btn" aria-label="Vision">
+              <svg viewBox="0 0 16 16">
+                <path d="M2 5.2V2h3.2 M14 5.2V2h-3.2 M2 10.8V14h3.2 M14 10.8V14h-3.2" stroke-linecap="round"></path>
+                <rect x="5.2" y="5.2" width="5.6" height="5.6"></rect>
+              </svg>
+            </button>
+
+            <!-- Icon 3: Force -->
+            <button class="icon-btn" aria-label="Force">
+              <svg viewBox="0 0 16 16">
+                <path d="M9.2 1.6L4 9.1h3.5L6.8 14.4 12 6.9H8.5L9.2 1.6Z" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Product Card Article -->
+        <article class="product-card">
+          <div class="product-thumb" aria-hidden="true"
+               style="background-image: url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260831_121937_3f02b5a0-5b86-43d9-b30e-03c5e46632e7.png&w=1920&q=85');">
+          </div>
+          <div class="product-body">
+            <h2 class="words-pull-up">CR-01: CYBER FRAME</h2>
+            <p class="fade-up-reveal" data-delay="1.05">
+              Precision-grade optics and a light frame for comfort and clarity.
+            </p>
+          </div>
+          <a href="#workout-hud" class="cart-btn fade-up-reveal" data-delay="1.15">Enter Gym HUD ⚡</a>
+        </article>
+
+      </div>
+
+      <!-- Right Column: Operative Specs -->
+      <aside class="specs">
+        <h3 class="words-pull-up">Operative Specs</h3>
+
+        <div class="spec-row fade-up-reveal" data-delay="1.2">
+          <span class="spec-label">Vision</span>
+          <span class="spec-value">Dual 8K Pulse-OLED</span>
+        </div>
+
+        <div class="spec-row fade-up-reveal" data-delay="1.3">
+          <span class="spec-label">Nerve</span>
+          <span class="spec-value">R1 - Ronin Engines</span>
+        </div>
+
+        <div class="spec-row fade-up-reveal" data-delay="1.4">
+          <span class="spec-label">Reflex</span>
+          <span class="spec-value">144Hz Low-Lag Ops</span>
+        </div>
+
+        <div class="spec-row fade-up-reveal" data-delay="1.5">
+          <span class="spec-label">Armor</span>
+          <span class="spec-value">Lightweight Shadow Shell</span>
+        </div>
+      </aside>
+
+    </div>
+
+  </main>
 
   <!-- Main Grid Dashboard -->
-  <main id="workout-hud" class="main-content">
+  <div id="workout-hud" class="main-content">
     
     <!-- Left Column: Workout HUD & Routines -->
     <section class="glass-panel hud-section stripe-purple">
+
+      <!-- Interactive 3D Robot Mascot (Executing Workout Actions) -->
+      <div class="hud-robot-container" id="robot-container">
+        <div id="robot-aura" class="robot-aura"></div>
+        <div class="robot-status-overlay">
+          <div id="robot-action-badge" class="robot-action-badge">
+            <span class="robot-action-dot"></span>
+            <span id="robot-action-text">Coach Standing By</span>
+          </div>
+          <div id="robot-exercise-indicator" class="robot-exercise-tag">Idle</div>
+        </div>
+        <div class="robot-viewer-wrapper" id="robot-wrapper">
+          <spline-viewer id="spline-robot" loading-anim-type="spinner-small-dark" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
+        </div>
+      </div>
       
       <!-- Routine Selector Pills (Rabto Bento style) -->
       <div class="routine-selector">

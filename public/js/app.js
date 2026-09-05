@@ -272,18 +272,29 @@ const voiceListener = new VoiceListener({
     }
   },
   onStatusChange: (status) => {
+    const btnMicToggle = document.getElementById('btn-mic-toggle');
+    const btnMicText = document.getElementById('btn-mic-text');
+
     if (status === 'LISTENING') {
       micVisualizer.classList.remove('speaking');
       micVisualizer.classList.add('listening');
       micIndicator.textContent = 'LISTENING';
       micIndicator.className = 'state-tag active-workout';
+      if (btnMicToggle) btnMicToggle.classList.add('active');
+      if (btnMicText) btnMicText.textContent = '🎙️ Mic Active (Listening)';
+    } else if (status === 'SPEECH_DETECTED') {
+      if (btnMicText) btnMicText.textContent = '🎙️ Hearing You...';
     } else if (status === 'OFF') {
       micVisualizer.className = 'mic-visualizer';
       micIndicator.textContent = 'STANDBY';
       micIndicator.className = 'state-tag';
+      if (btnMicToggle) btnMicToggle.classList.remove('active');
+      if (btnMicText) btnMicText.textContent = '🎙️ Start Hands-Free Mic';
     } else if (status === 'MIC_BLOCKED') {
       micIndicator.textContent = 'BLOCKED';
       micIndicator.className = 'state-tag interrupted';
+      if (btnMicToggle) btnMicToggle.classList.remove('active');
+      if (btnMicText) btnMicText.textContent = '❌ Mic Blocked (Click)';
     }
   },
   onInterim: (text) => {
@@ -619,6 +630,148 @@ async function initApp() {
   }
 
   initWaveformVisualizer();
+  initCyberRoninAnimations();
+  initMicInteractions();
 }
+
+// =========================================================
+// 1. Cyber Ronin Cursor & Touch Spotlight Reveal
+// =========================================================
+const revealImg = document.getElementById('reveal-img');
+function updateSpotlight(clientX, clientY) {
+  if (!revealImg) return;
+  const rect = revealImg.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  const width = window.innerWidth;
+  const r = width < 480 ? 120 : (width < 720 ? 160 : 260);
+  const gradient = `radial-gradient(circle ${r}px at ${x}px ${y}px, #fff 0%, #fff 40%, rgba(255,255,255,0.75) 60%, rgba(255,255,255,0.4) 75%, rgba(255,255,255,0.12) 88%, transparent 100%)`;
+  revealImg.style.webkitMaskImage = gradient;
+  revealImg.style.maskImage = gradient;
+}
+window.addEventListener('mousemove', (e) => updateSpotlight(e.clientX, e.clientY));
+window.addEventListener('touchmove', (e) => {
+  if (e.touches && e.touches[0]) updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: true });
+
+// =========================================================
+// 2. Cyber Ronin Words Pull-Up & IntersectionObserver
+// =========================================================
+function initCyberRoninAnimations() {
+  const wordsPullUpEls = document.querySelectorAll('.words-pull-up');
+  wordsPullUpEls.forEach((el) => {
+    if (el.dataset.split) return;
+    el.dataset.split = 'true';
+    const isH1 = el.tagName.toLowerCase() === 'h1';
+    const directSpans = el.querySelectorAll(':scope > span');
+    if (isH1 && directSpans.length > 0) {
+      let continuousIndex = 0;
+      directSpans.forEach((span) => {
+        span.classList.add('pull-line');
+        const rawText = span.textContent.trim();
+        span.innerHTML = '';
+        const words = rawText.split(/\s+/);
+        words.forEach((word) => {
+          if (!word) return;
+          const wordSpan = document.createElement('span');
+          wordSpan.className = 'pull-word';
+          wordSpan.textContent = word;
+          wordSpan.style.animationDelay = `${continuousIndex * 0.1}s`;
+          span.appendChild(wordSpan);
+          continuousIndex++;
+        });
+      });
+    } else {
+      const rawTextSimple = el.textContent.trim();
+      el.innerHTML = '';
+      const wordsSimple = rawTextSimple.split(/\s+/);
+      wordsSimple.forEach((word, idx) => {
+        if (!word) return;
+        const wordSpan = document.createElement('span');
+        wordSpan.className = 'pull-word';
+        wordSpan.textContent = word;
+        wordSpan.style.animationDelay = `${idx * 0.1}s`;
+        el.appendChild(wordSpan);
+      });
+    }
+  });
+
+  if ('IntersectionObserver' in window) {
+    const wordsObserver = new IntersectionObserver((entries, obs) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('words-visible');
+          obs.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.2 });
+    wordsPullUpEls.forEach((el) => wordsObserver.observe(el));
+
+    const fadeEls = document.querySelectorAll('.fade-up-reveal');
+    const fadeObserver = new IntersectionObserver((entries, obs) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const delay = entry.target.getAttribute('data-delay') || '0';
+          entry.target.style.animationDelay = `${delay}s`;
+          entry.target.classList.add('is-visible');
+          obs.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    fadeEls.forEach((el) => fadeObserver.observe(el));
+  } else {
+    wordsPullUpEls.forEach((el) => el.classList.add('words-visible'));
+    document.querySelectorAll('.fade-up-reveal').forEach((el) => {
+      const delay = el.getAttribute('data-delay') || '0';
+      el.style.animationDelay = `${delay}s`;
+      el.classList.add('is-visible');
+    });
+  }
+}
+
+// =========================================================
+// 3. Hands-Free Mic Controls & Auto-Gesture Activation
+// =========================================================
+function initMicInteractions() {
+  const btnMicToggle = document.getElementById('btn-mic-toggle');
+  if (btnMicToggle) {
+    btnMicToggle.addEventListener('click', () => {
+      soundFx.init();
+      audioController.initAudioContext();
+      voiceListener.toggle();
+    });
+  }
+
+  // Auto-start microphone on first user gesture anywhere
+  function autoStartMic() {
+    soundFx.init();
+    audioController.initAudioContext();
+    if (!voiceListener.isListening) {
+      voiceListener.start();
+    }
+  }
+  window.addEventListener('click', autoStartMic, { once: true });
+  window.addEventListener('touchstart', autoStartMic, { once: true });
+}
+
+// =========================================================
+// 4. Clean Spline Watermark / Logo Remover
+// =========================================================
+function hideSplineLogo() {
+  const viewer = document.getElementById('spline-robot');
+  if (viewer && viewer.shadowRoot) {
+    const logo = viewer.shadowRoot.querySelector('#logo') || 
+                 viewer.shadowRoot.querySelector('a[href*="spline.design"]') ||
+                 viewer.shadowRoot.querySelector('.spline-watermark');
+    if (logo) {
+      logo.style.display = 'none';
+      logo.style.opacity = '0';
+      logo.style.visibility = 'hidden';
+      logo.style.pointerEvents = 'none';
+      try { logo.remove(); } catch(e) {}
+    }
+  }
+}
+setInterval(hideSplineLogo, 120);
 
 initApp();
