@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Spline 3D Viewer Web Component -->
+  <script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.72/build/spline-viewer.js"></script>
 </head>
 <body>
 
@@ -44,8 +46,30 @@
     </div>
   </header>
 
+  <!-- Hero Section (Rabto Modern Startup Aesthetic) -->
+  <section class="hero-section">
+    <div class="hero-left">
+      <div class="hero-pill-badge">
+        <span>✨</span> Hands-Free AI Athlete Experience
+      </div>
+      <h2 class="hero-title">The AI Gym Coach That Listens <span>Mid-Rep —</span></h2>
+      <p class="hero-subtitle">
+        Hands busy. Sweaty palms. Eyes off screen. Instant &lt;50ms hardware barge-in interruption powered by Rime.ai Coda &amp; conversational athletic intelligence.
+      </p>
+      <div class="hero-cta-row">
+        <a href="#workout-hud" class="btn-hero primary">⚡ Jump To Workout HUD</a>
+        <a href="#pronunciation-lab" class="btn-hero secondary">🔬 Pronunciation Lab</a>
+      </div>
+    </div>
+
+    <!-- Interactive 3D Robot Experience -->
+    <div class="hero-robot-container">
+      <spline-viewer id="spline-robot" loading-anim-type="spinner-small-dark" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
+    </div>
+  </section>
+
   <!-- Main Grid Dashboard -->
-  <main class="main-content">
+  <main id="workout-hud" class="main-content">
     
     <!-- Left Column: Workout HUD & Routines -->
     <section class="glass-panel hud-section stripe-purple">

@@ -220,47 +220,81 @@ function triggerBargeIn(reason) {
   audioController.interrupt(reason);
 }
 
-// Spoken Command Router
-function handleSpokenCommand(command, rawText) {
-  logMessage(`🎙️ [COMMAND HEARD] "${rawText}" -> ${command}`, 'user');
+// Spoken Command Router with Dynamic AI Semantic Brain
+async function handleSpokenCommand(fallbackCommand, rawText) {
+  logMessage(`🎙️ [HEARD] "${rawText}"`, 'user');
 
-  // Any command cuts audio first
-  triggerBargeIn(`Command parsed: ${command}`);
+  // 1. Instant hardware audio cutoff (<1ms)
+  triggerBargeIn(`Spoken input: "${rawText}"`);
 
-  switch (command) {
-    case 'SKIP_REST':
-      if (stateMachine.state === STATES.REST_TIMER) {
+  // 2. Query AI Semantic Intent Engine (Handles slang, mispronunciations, and custom fitness questions)
+  const ctx = stateMachine.getContext();
+  try {
+    const res = await fetch('/api/intent-ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        utterance: rawText,
+        workoutContext: {
+          exerciseName: ctx.exercise.name,
+          set: ctx.set,
+          state: ctx.state
+        }
+      })
+    });
+
+    const data = await res.json();
+    const action = data.action || fallbackCommand;
+    logMessage(`🧠 [AI INTENT (${data.source})] "${rawText}" ➔ ${action}`, 'success');
+
+    switch (action) {
+      case 'SKIP_REST':
         logMessage(`🎯 Executing: SKIP REST`, 'success');
         stateMachine.skipRest();
-      } else {
-        stateMachine.skipRest();
-      }
-      break;
+        break;
 
-    case 'PAUSE':
-      stateMachine.pause();
-      break;
+      case 'PAUSE':
+        logMessage(`🎯 Executing: PAUSE WORKOUT`, 'info');
+        stateMachine.pause();
+        if (data.spokenFeedback) audioController.speak(data.spokenFeedback, true);
+        break;
 
-    case 'RESUME':
-      stateMachine.resume();
-      break;
+      case 'RESUME':
+        logMessage(`🎯 Executing: RESUME WORKOUT`, 'success');
+        stateMachine.resume();
+        break;
 
-    case 'ADD_REST':
-      if (stateMachine.state === STATES.REST_TIMER) {
-        stateMachine.addRestSeconds(10);
-      } else {
-        audioController.speak("You can only add rest time during a rest period.");
-      }
-      break;
+      case 'ADD_REST':
+        const secs = data.parameter || 10;
+        logMessage(`🎯 Executing: ADD ${secs}s REST`, 'success');
+        if (stateMachine.state === STATES.REST_TIMER) {
+          stateMachine.addRestSeconds(secs);
+        } else {
+          audioController.speak(data.spokenFeedback || `Added ${secs} seconds.`);
+        }
+        break;
 
-    case 'NEXT_EXERCISE':
-      stateMachine.nextExercise();
-      break;
+      case 'NEXT_EXERCISE':
+        logMessage(`🎯 Executing: NEXT EXERCISE`, 'success');
+        stateMachine.nextExercise();
+        break;
 
-    default:
-      console.log('Unrecognized command:', command);
+      case 'COACH_ADVICE':
+      default:
+        if (data.spokenFeedback) {
+          logMessage(`✨ [COACH ADVICE] "${data.spokenFeedback}"`, 'coach');
+          audioController.speak(data.spokenFeedback, true);
+        }
+        break;
+    }
+  } catch (err) {
+    console.error('Intent parsing error:', err);
+    // Graceful fallback to basic command if network fails
+    if (fallbackCommand === 'SKIP_REST') stateMachine.skipRest();
+    else if (fallbackCommand === 'PAUSE') stateMachine.pause();
   }
 }
+window.handleSpokenCommand = handleSpokenCommand;
 
 // Conversational AI Coach Brain (Powered by gemini-web2api)
 async function askAiCoach(question) {

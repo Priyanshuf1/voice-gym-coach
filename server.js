@@ -91,11 +91,150 @@ RULES:
     fallbackReply = "Every rep you do right now is where the real growth happens. Dig deep, you've got this!";
   } else if (lower.includes('breathe') || lower.includes('breath')) {
     fallbackReply = "Inhale deep on the way down, and exhale with power as you push up!";
-  } else if (lower.includes('form') || lower.includes('technique')) {
+  } else  if (lower.includes('form') || lower.includes('technique')) {
     fallbackReply = "Keep your core braced tight and maintain full control through the entire range of motion.";
   }
 
   return res.json({ reply: fallbackReply, source: 'coach-heuristic' });
+});
+
+// Full Semantic & Slang Intent Engine (Beyond 4 Hardcoded Commands)
+app.post('/api/intent-ai', async (req, res) => {
+  const { utterance = '', workoutContext = {} } = req.body;
+  const raw = utterance.trim();
+  const lower = raw.toLowerCase();
+
+  if (!raw) {
+    return res.status(400).json({ error: 'Utterance is required' });
+  }
+
+  // 1. Phonetic & Colloquial Slang Normalization Rules (<1ms)
+  // Catch mispronunciations (paws, skipt), regional slang (hold up, chill, hit me), and conversational intent
+  if (
+    lower.includes('paws') || lower.includes('pos') || lower.includes('hault') ||
+    lower.includes('hold up') || lower.includes('hold on') || lower.includes('hol up') ||
+    lower.includes('hol on') || lower.includes('gimme a sec') || lower.includes('gimme a min') ||
+    lower.includes('wait up') || lower.includes('chill') || lower.includes('time out') ||
+    lower.includes('take a break') || lower.includes('need water') || lower.includes('let me breathe') ||
+    lower.includes('dying') || lower.includes('stop') || lower.includes('pause')
+  ) {
+    return res.json({
+      action: 'PAUSE',
+      spokenFeedback: 'Workout paused. Take your time and breathe.',
+      source: 'phonetic-engine'
+    });
+  }
+
+  if (
+    lower.includes('skipt') || lower.includes('skip') || lower.includes('next set') ||
+    lower.includes('next sit') || lower.includes('next round') || lower.includes('hit me') ||
+    lower.includes('bring it on') || lower.includes('ready to roll') || lower.includes('im good') ||
+    lower.includes("i'm good") || lower.includes('lets go') || lower.includes("let's go") ||
+    lower.includes('cut the rest') || lower.includes('cut rest') || lower.includes('im ready') ||
+    lower.includes("i'm ready") || lower.includes('start set')
+  ) {
+    return res.json({
+      action: 'SKIP_REST',
+      spokenFeedback: 'Skipping rest! Starting the next set now.',
+      source: 'phonetic-engine'
+    });
+  }
+
+  // Add time (regex check for numbers like 10, 15, 20, 30 seconds or 'minute')
+  const addMatch = lower.match(/(?:add|need|gimme|give me|more)\s*(\d+|ten|fifteen|twenty|thirty|minute)?\s*(?:sec|second|more|time|rest)/);
+  if (addMatch || lower.includes('more time') || lower.includes('more rest') || lower.includes('longer rest')) {
+    let secs = 10;
+    if (lower.includes('15') || lower.includes('fifteen')) secs = 15;
+    else if (lower.includes('20') || lower.includes('twenty')) secs = 20;
+    else if (lower.includes('30') || lower.includes('thirty')) secs = 30;
+    else if (lower.includes('minute') || lower.includes('60')) secs = 60;
+
+    return res.json({
+      action: 'ADD_REST',
+      parameter: secs,
+      spokenFeedback: `Added ${secs} more seconds to rest. Catch your breath!`,
+      source: 'phonetic-engine'
+    });
+  }
+
+  if (
+    lower.includes('switch') || lower.includes('next exercise') || lower.includes('skip exercise') ||
+    lower.includes('different exercise') || lower.includes('what is next') || lower.includes("what's next") ||
+    lower.includes('move on') || lower.includes('change workout') || lower.includes('swap')
+  ) {
+    return res.json({
+      action: 'NEXT_EXERCISE',
+      spokenFeedback: 'Moving on to the next exercise!',
+      source: 'phonetic-engine'
+    });
+  }
+
+  if (
+    lower.includes('resume') || lower.includes('continue') || lower.includes('back at it') ||
+    lower.includes('start again') || lower.includes('keep going')
+  ) {
+    return res.json({
+      action: 'RESUME',
+      spokenFeedback: 'Resuming workout! Let\'s finish strong.',
+      source: 'phonetic-engine'
+    });
+  }
+
+  // 2. High-Level AI LLM Classification (Gemini-Web2API)
+  // For freeform conversational requests, complaints, queries, or coaching questions
+  try {
+    const promptSystem = `You are the AI brain of a hands-free gym coach. Current exercise: ${workoutContext.exerciseName || 'Push-ups'}, Set ${workoutContext.set || 1}, State: ${workoutContext.state || 'ACTIVE'}.
+The user said: "${raw}".
+Classify into ONE action:
+- "PAUSE" (wants to stop, rest, freeze, catch breath, get water)
+- "SKIP_REST" (wants to start next set, skip rest, says ready)
+- "ADD_REST" (wants more rest time)
+- "NEXT_EXERCISE" (wants to skip or change exercise)
+- "RESUME" (wants to continue from paused)
+- "COACH_ADVICE" (asking fitness question, form tip, pain, or motivation)
+
+Respond strictly with a JSON object:
+{"action": "...", "parameter": 10, "spokenFeedback": "1-2 brief spoken sentences under 20 words for the coach to say out loud"}`;
+
+    const geminiRes = await fetch(`${GEMINI_API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer sk-gemini'
+      },
+      body: JSON.stringify({
+        model: 'gemini-3.6-flash',
+        messages: [{ role: 'system', content: promptSystem }],
+        temperature: 0.2,
+        max_tokens: 70
+      }),
+      signal: AbortSignal.timeout(3500)
+    });
+
+    if (geminiRes.ok) {
+      const data = await geminiRes.json();
+      const content = data.choices?.[0]?.message?.content?.trim();
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return res.json({
+          action: parsed.action || 'COACH_ADVICE',
+          parameter: parsed.parameter || 10,
+          spokenFeedback: parsed.spokenFeedback || 'Stay focused and keep pushing!',
+          source: 'gemini-brain'
+        });
+      }
+    }
+  } catch (err) {
+    // Fallback if LLM unavailable
+  }
+
+  // 3. Fallback to conversational coach advice
+  return res.json({
+    action: 'COACH_ADVICE',
+    spokenFeedback: "Keep your breathing steady and your form tight. You've got this!",
+    source: 'coach-fallback'
+  });
 });
 
 // Proxy endpoint for Rime.ai Text-To-Speech
