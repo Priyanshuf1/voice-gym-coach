@@ -77,7 +77,17 @@ const rimeClient = new RimeClient({
   modelId: 'coda'
 });
 
-// 2. Initialize Audio Controller
+// Elements for Robot Speech Transmission HUD
+const robotSpeechHud = document.getElementById('robot-speech-hud');
+const speechHudTitle = document.getElementById('speech-hud-title');
+const speechEqBars = document.getElementById('speech-eq-bars');
+const robotContainer = document.getElementById('robot-container');
+const robotWrapper = document.getElementById('robot-wrapper');
+const robotAura = document.getElementById('robot-aura');
+const robotActionText = document.getElementById('robot-action-text');
+const robotExerciseIndicator = document.getElementById('robot-exercise-indicator');
+
+// 2. Initialize Audio Controller with live Robot sync
 const audioController = new AudioController(
   rimeClient,
   (subtitle) => {
@@ -86,15 +96,31 @@ const audioController = new AudioController(
   },
   (logText, logType) => {
     logMessage(logText, logType);
+  },
+  (isPlaying, text) => {
+    if (isPlaying) {
+      if (robotSpeechHud) robotSpeechHud.classList.add('is-talking');
+      if (speechHudTitle) speechHudTitle.textContent = 'COACH CELESTE • SPEAKING';
+      if (robotAura) robotAura.classList.add('talking-pulse');
+      if (robotActionText) robotActionText.textContent = '🎙️ Coach Speaking...';
+    } else {
+      if (robotSpeechHud) robotSpeechHud.classList.remove('is-talking');
+      if (speechHudTitle) speechHudTitle.textContent = 'COACH CELESTE • READY';
+      if (robotAura) robotAura.classList.remove('talking-pulse');
+      
+      const ctx = stateMachine.getContext();
+      if (ctx.state === STATES.EXERCISE_REPS) {
+        if (robotActionText) robotActionText.textContent = `Set ${ctx.set}: Rep ${ctx.rep}`;
+      } else if (ctx.state === STATES.REST_TIMER) {
+        if (robotActionText) robotActionText.textContent = `Rest & Breathe (${ctx.restRemaining}s)`;
+      } else if (ctx.state === STATES.PAUSED) {
+        if (robotActionText) robotActionText.textContent = 'Workout Paused (Holding)';
+      } else {
+        if (robotActionText) robotActionText.textContent = 'Coach Standing By';
+      }
+    }
   }
 );
-
-// Robot Action Controller Elements
-const robotContainer = document.getElementById('robot-container');
-const robotWrapper = document.getElementById('robot-wrapper');
-const robotAura = document.getElementById('robot-aura');
-const robotActionText = document.getElementById('robot-action-text');
-const robotExerciseIndicator = document.getElementById('robot-exercise-indicator');
 
 function resetRobotAnimations() {
   if (!robotWrapper) return;
@@ -157,6 +183,16 @@ function triggerRobotRepAction(exerciseName, repNumber) {
 }
 
 function triggerRobotBargeIn() {
+  if (robotSpeechHud) {
+    robotSpeechHud.classList.remove('is-talking');
+    robotSpeechHud.classList.add('is-interrupted');
+    if (speechHudTitle) speechHudTitle.textContent = '⚡ BARGE-IN CUTOFF (<1ms)';
+    setTimeout(() => {
+      if (robotSpeechHud) robotSpeechHud.classList.remove('is-interrupted');
+      if (speechHudTitle) speechHudTitle.textContent = 'COACH CELESTE • READY';
+    }, 1500);
+  }
+
   if (!robotWrapper) return;
   resetRobotAnimations();
   void robotWrapper.offsetWidth;
@@ -353,6 +389,19 @@ async function handleSpokenCommand(fallbackCommand, rawText) {
     logMessage(`🧠 [AI INTENT (${data.source})] "${rawText}" ➔ ${action}`, 'success');
 
     switch (action) {
+      case 'START':
+        logMessage(`🎯 Executing: START WORKOUT`, 'success');
+        if (stateMachine.state === STATES.IDLE || stateMachine.state === STATES.COMPLETED) {
+          stateMachine.startWorkout();
+        } else if (stateMachine.state === STATES.PAUSED) {
+          stateMachine.resume();
+        } else if (stateMachine.state === STATES.REST_TIMER) {
+          stateMachine.skipRest();
+        } else {
+          audioController.speak(`We are already locked into Set ${ctx.set}! Keep driving!`, true);
+        }
+        break;
+
       case 'SKIP_REST':
         logMessage(`🎯 Executing: SKIP REST`, 'success');
         stateMachine.skipRest();
@@ -361,12 +410,17 @@ async function handleSpokenCommand(fallbackCommand, rawText) {
       case 'PAUSE':
         logMessage(`🎯 Executing: PAUSE WORKOUT`, 'info');
         stateMachine.pause();
-        if (data.spokenFeedback) audioController.speak(data.spokenFeedback, true);
         break;
 
       case 'RESUME':
         logMessage(`🎯 Executing: RESUME WORKOUT`, 'success');
-        stateMachine.resume();
+        if (stateMachine.state === STATES.PAUSED) {
+          stateMachine.resume();
+        } else if (stateMachine.state === STATES.IDLE) {
+          stateMachine.startWorkout();
+        } else if (stateMachine.state === STATES.REST_TIMER) {
+          stateMachine.skipRest();
+        }
         break;
 
       case 'ADD_REST':
@@ -387,16 +441,24 @@ async function handleSpokenCommand(fallbackCommand, rawText) {
       case 'COACH_ADVICE':
       default:
         if (data.spokenFeedback) {
-          logMessage(`✨ [COACH ADVICE] "${data.spokenFeedback}"`, 'coach');
+          logMessage(`✨ [COACH ADVICE (${data.source})] "${data.spokenFeedback}"`, 'coach');
           audioController.speak(data.spokenFeedback, true);
+        } else {
+          askAiCoach(rawText);
         }
         break;
     }
   } catch (err) {
     console.error('Intent parsing error:', err);
     // Graceful fallback to basic command if network fails
-    if (fallbackCommand === 'SKIP_REST') stateMachine.skipRest();
-    else if (fallbackCommand === 'PAUSE') stateMachine.pause();
+    if (fallbackCommand === 'START') {
+      if (stateMachine.state === STATES.IDLE) stateMachine.startWorkout();
+      else if (stateMachine.state === STATES.PAUSED) stateMachine.resume();
+    } else if (fallbackCommand === 'SKIP_REST') {
+      stateMachine.skipRest();
+    } else if (fallbackCommand === 'PAUSE') {
+      stateMachine.pause();
+    }
   }
 }
 window.handleSpokenCommand = handleSpokenCommand;

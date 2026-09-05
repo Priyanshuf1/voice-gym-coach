@@ -9,10 +9,11 @@
  */
 
 export class AudioController {
-  constructor(rimeClient, onSubtitleUpdate, onLog) {
+  constructor(rimeClient, onSubtitleUpdate, onLog, onPlaybackState) {
     this.rimeClient = rimeClient;
     this.onSubtitleUpdate = onSubtitleUpdate || (() => {});
     this.onLog = onLog || (() => {});
+    this.onPlaybackState = onPlaybackState || (() => {});
 
     // Active audio element
     this.currentAudio = null;
@@ -61,12 +62,15 @@ export class AudioController {
 
       this.onSubtitleUpdate(text);
       this.isPlaying = true;
+      this.onPlaybackState(true, text);
 
       try {
         const result = await this.rimeClient.synthesize(text, signal);
 
         // Check if interrupted while fetching from network
         if (this.isInterrupted || signal.aborted) {
+          this.isPlaying = false;
+          this.onPlaybackState(false, '');
           resolve(false);
           return;
         }
@@ -81,6 +85,7 @@ export class AudioController {
             URL.revokeObjectURL(audioUrl);
             this.currentAudio = null;
             this.isPlaying = false;
+            this.onPlaybackState(false, '');
             resolve(true);
           };
 
@@ -89,6 +94,7 @@ export class AudioController {
             URL.revokeObjectURL(audioUrl);
             this.currentAudio = null;
             this.isPlaying = false;
+            this.onPlaybackState(false, '');
             resolve(false);
           };
 
@@ -98,11 +104,12 @@ export class AudioController {
           this.playBrowserSynthesis(text, resolve);
         }
       } catch (err) {
+        this.isPlaying = false;
+        this.onPlaybackState(false, '');
         if (err.name === 'AbortError') {
           resolve(false);
         } else {
           console.error('[AudioController] Speak error:', err);
-          this.isPlaying = false;
           resolve(false);
         }
       }
@@ -112,6 +119,7 @@ export class AudioController {
   playBrowserSynthesis(text, resolve) {
     if (!('speechSynthesis' in window)) {
       this.isPlaying = false;
+      this.onPlaybackState(false, '');
       resolve(true);
       return;
     }
@@ -121,8 +129,14 @@ export class AudioController {
     utterance.rate = 1.05;
     utterance.pitch = 1.0;
 
+    utterance.onstart = () => {
+      this.isPlaying = true;
+      this.onPlaybackState(true, text);
+    };
+
     utterance.onend = () => {
       this.isPlaying = false;
+      this.onPlaybackState(false, '');
       resolve(true);
     };
 
@@ -131,6 +145,7 @@ export class AudioController {
         console.warn('[AudioController] Fallback TTS error:', e);
       }
       this.isPlaying = false;
+      this.onPlaybackState(false, '');
       resolve(false);
     };
 
@@ -146,6 +161,7 @@ export class AudioController {
     const startTime = performance.now();
     this.isInterrupted = true;
     this.isPlaying = false;
+    this.onPlaybackState(false, '');
 
     // 1. Instantly stop HTMLAudio playback
     if (this.currentAudio) {

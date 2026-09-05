@@ -142,6 +142,25 @@ export class VoiceListener {
   checkFastCommands(text) {
     const clean = text.toLowerCase();
 
+    // 0. Start Workout / Let's Go / Begin / Start the Gym
+    if (
+      clean.includes('start the gym') ||
+      clean.includes('start workout') ||
+      clean.includes('start now') ||
+      clean.includes('lets go') ||
+      clean.includes("let's go") ||
+      clean.includes('begin') ||
+      clean.includes('get started') ||
+      clean.includes('hit it') ||
+      clean.trim() === 'start' ||
+      clean.startsWith('start ')
+    ) {
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('START', text);
+      return true;
+    }
+
     // 1. Emergency Stop / Pause
     if (
       clean.includes('stop') ||
@@ -154,10 +173,9 @@ export class VoiceListener {
       clean.includes('shut up') ||
       clean.includes('freeze')
     ) {
-      if (this.lastProcessedText !== clean) {
-        this.lastProcessedText = clean;
-        this.onCommand('PAUSE', text);
-      }
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('PAUSE', text);
       return true;
     }
 
@@ -172,10 +190,9 @@ export class VoiceListener {
       clean.includes('hit me') ||
       clean.includes('cut rest')
     ) {
-      if (this.lastProcessedText !== clean) {
-        this.lastProcessedText = clean;
-        this.onCommand('SKIP_REST', text);
-      }
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('SKIP_REST', text);
       return true;
     }
 
@@ -187,28 +204,25 @@ export class VoiceListener {
       clean.includes('start again') ||
       clean.includes('keep going')
     ) {
-      if (this.lastProcessedText !== clean) {
-        this.lastProcessedText = clean;
-        this.onCommand('RESUME', text);
-      }
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('RESUME', text);
       return true;
     }
 
     // 4. Add rest
     if (clean.includes('add 10') || clean.includes('add ten') || clean.includes('more time') || clean.includes('more rest')) {
-      if (this.lastProcessedText !== clean) {
-        this.lastProcessedText = clean;
-        this.onCommand('ADD_REST', text);
-      }
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('ADD_REST', text);
       return true;
     }
 
     // 5. Next Exercise
     if (clean.includes('next exercise') || clean.includes('skip exercise') || clean.includes('different exercise')) {
-      if (this.lastProcessedText !== clean) {
-        this.lastProcessedText = clean;
-        this.onCommand('NEXT_EXERCISE', text);
-      }
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('NEXT_EXERCISE', text);
       return true;
     }
 

@@ -54,15 +54,15 @@
     </div>
   </header>
 
-  <!-- Fixed Cyber Ronin Background with Interactive Cursor Spotlight -->
-  <div class="fixed-bg-base"
-       style="background-image: url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260831_115955_2a9adb39-5e9b-4ced-96e2-6900eabe3de9.png&w=1920&q=85');">
-  </div>
-  <div class="fixed-bg-reveal" id="reveal-img"
-       style="background-image: url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260831_123709_183f0065-efb2-4bb2-a849-13aaa5af2f3f.png&w=1920&q=85');">
+  <!-- High-Performance Rabto Athletic Canvas Background (Subtle Grid & Ambient Lighting) -->
+  <div class="athletic-matrix-bg">
+    <div class="athletic-grid-pattern"></div>
+    <div class="ambient-glow glow-violet"></div>
+    <div class="ambient-glow glow-cyan"></div>
+    <div class="ambient-glow glow-emerald"></div>
   </div>
 
-  <!-- Interactive 3D Robot Hero Stage (Workout-Matching Actions) -->
+  <!-- Interactive 3D Robot Hero Stage (Workout-Matching Actions & Direct Robot Voice) -->
   <section class="hero-robot-stage">
     <div class="hero-stage-content">
       <div class="hero-stage-pill">
@@ -70,13 +70,34 @@
       </div>
       <h1 class="hero-stage-title">Speak Naturally. The AI Coach Listens <span>Mid-Rep.</span></h1>
       <p class="hero-stage-sub">
-        No button taps. No 4-word limitations. Speak freely to ask questions, extend rest, or interrupt mid-sentence with &lt;1ms hardware cutoff.
+        No button taps. No word limitations. Say "start", "pause", or ask "how is my form?" to get instant spoken biomechanical guidance.
       </p>
     </div>
 
-    <!-- 3D Interactive Mascot (Spline Robot with Zero Watermark) -->
+    <!-- 3D Interactive Mascot (Spline Robot as Direct AI Voice Coach) -->
     <div class="hero-robot-container" id="robot-container">
       <div id="robot-aura" class="robot-aura"></div>
+
+      <!-- Real-Time Coach Speech HUD Attached Directly to the Robot -->
+      <div class="robot-speech-hud" id="robot-speech-hud">
+        <div class="speech-hud-header">
+          <div class="speech-live-indicator">
+            <span class="speech-live-dot"></span>
+            <span class="speech-hud-title" id="speech-hud-title">COACH CELESTE • READY</span>
+          </div>
+          <div class="speech-eq-bars" id="speech-eq-bars">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="speech-bubble-body">
+          <p id="coach-subtitle" class="coach-speech-text">"Say 'Start' or ask me anything about your workout to begin!"</p>
+        </div>
+        <div class="speech-hud-footer">
+          <span class="speech-latency-tag">⚡ Barge-In: &lt;1ms Cutoff</span>
+          <span class="speech-model-tag">Rime Coda + Gemini Brain</span>
+        </div>
+      </div>
+
       <div class="robot-status-overlay">
         <div id="robot-action-badge" class="robot-action-badge">
           <span class="robot-action-dot"></span>
@@ -127,15 +148,6 @@
 
       <!-- Live Web Audio Equalizer Waveform -->
       <canvas id="visualizer-canvas" class="visualizer-canvas"></canvas>
-
-      <!-- Real-time Coach Speech Bubble -->
-      <div class="coach-speech-card">
-        <div class="coach-avatar">🤖</div>
-        <div class="coach-text-container">
-          <div class="coach-meta">Coach Celeste (Rime.ai Coda)</div>
-          <div id="coach-subtitle" class="coach-text">"Tap Start Workout or say 'Start' to begin."</div>
-        </div>
-      </div>
 
       <!-- Primary Controls -->
       <div class="controls-row">

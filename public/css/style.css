@@ -1,22 +1,23 @@
 :root {
-  --bg-pure: #ffffff;
-  --panel-bg: rgba(255, 255, 255, 0.88);
-  --panel-border: rgba(226, 232, 240, 0.9);
-  --panel-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.07), 0 0 1px 1px rgba(15, 23, 42, 0.04);
+  --bg-pure: #080A10;
+  --bg-surface: #0E131F;
+  --panel-bg: rgba(15, 20, 32, 0.82);
+  --panel-border: rgba(255, 255, 255, 0.09);
+  --panel-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(255, 255, 255, 0.06);
   
-  --primary-purple: #7c3aed;
-  --primary-purple-glow: rgba(124, 58, 237, 0.35);
-  --primary-cyan: #0284c7;
-  --primary-cyan-glow: rgba(2, 132, 199, 0.3);
-  --primary-emerald: #059669;
-  --primary-amber: #d97706;
-  --primary-rose: #e11d48;
-  --primary-rose-glow: rgba(225, 29, 72, 0.3);
+  --primary-purple: #8B5CF6;
+  --primary-purple-glow: rgba(139, 92, 246, 0.35);
+  --primary-cyan: #06B6D4;
+  --primary-cyan-glow: rgba(6, 182, 212, 0.35);
+  --primary-emerald: #10B981;
+  --primary-amber: #F59E0B;
+  --primary-rose: #F43F5E;
+  --primary-rose-glow: rgba(244, 63, 94, 0.35);
 
-  --text-headline: #0f172a;
-  --text-body: #334155;
-  --text-muted: #64748b;
-  --text-subtle: #94a3b8;
+  --text-headline: #FFFFFF;
+  --text-body: #E2E8F0;
+  --text-muted: #94A3B8;
+  --text-subtle: #64748B;
 }
 
 * {
@@ -27,7 +28,7 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: #C45A18;
+  background-color: var(--bg-pure);
   color: var(--text-headline);
   min-height: 100vh;
   display: flex;
@@ -36,29 +37,60 @@ body {
   position: relative;
 }
 
-/* Full-Screen Cyber Ronin Fixed Background with Interactive Spotlight */
-.fixed-bg-base {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
-  pointer-events: none;
-}
-
-.fixed-bg-reveal {
+/* =========================================================
+   High-Performance Rabto Athletic Matrix Background
+   (Vector isometric gym track grid + ambient lighting)
+   ========================================================= */
+.athletic-matrix-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(circle 0px at -999px -999px, #fff, transparent);
-  mask-image: radial-gradient(circle 0px at -999px -999px, #fff, transparent);
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 0%, #111726 0%, #080A10 75%);
+}
+
+.athletic-grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at 50% 35%, black 40%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 35%, black 40%, transparent 85%);
+}
+
+.ambient-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.ambient-glow.glow-violet {
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.22) 0%, transparent 70%);
+  top: -100px;
+  left: -100px;
+}
+
+.ambient-glow.glow-cyan {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.18) 0%, transparent 70%);
+  top: 15%;
+  right: -100px;
+}
+
+.ambient-glow.glow-emerald {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+  bottom: -150px;
+  left: 20%;
 }
 
 /* Header */
@@ -67,14 +99,14 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 0.85rem 2.25rem;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--panel-border);
+  background: rgba(8, 10, 16, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   position: sticky;
   top: 0;
   z-index: 50;
-  box-shadow: 0 4px 20px -5px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.5);
   flex-wrap: wrap;
   gap: 0.75rem;
 }
@@ -169,8 +201,8 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(241, 245, 249, 0.85);
-  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.25rem 0.65rem;
   border-radius: 9999px;
 }
@@ -208,9 +240,9 @@ spline-viewer::part(logo),
   gap: 0.5rem;
   padding: 0.35rem 0.85rem;
   border-radius: 9999px;
-  background: rgba(2, 132, 199, 0.1);
-  border: 1px solid rgba(2, 132, 199, 0.3);
-  color: var(--primary-cyan);
+  background: rgba(6, 182, 212, 0.15);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: #22D3EE;
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
@@ -218,13 +250,13 @@ spline-viewer::part(logo),
 }
 
 .btn-mic-header:hover {
-  background: rgba(2, 132, 199, 0.18);
+  background: rgba(6, 182, 212, 0.25);
 }
 
 .btn-mic-header.active {
-  background: rgba(5, 150, 105, 0.12);
-  border-color: rgba(5, 150, 105, 0.4);
-  color: var(--primary-emerald);
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #34D399;
 }
 
 .btn-mic-header.active .pulse-dot {
@@ -233,17 +265,17 @@ spline-viewer::part(logo),
 }
 
 /* =========================================================
-   HERO ROBOT STAGE (Interactive Mascot at Top)
+   HERO ROBOT STAGE (Interactive Mascot & Direct Robot Voice)
    ========================================================= */
 
 .hero-robot-stage {
   max-width: 1320px;
   width: 100%;
-  margin: 1.25rem auto 0.5rem auto;
+  margin: 2.25rem auto 1rem auto;
   padding: 0 2rem;
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 1.75rem;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 2rem;
   align-items: center;
   position: relative;
   z-index: 10;
@@ -272,9 +304,9 @@ spline-viewer::part(logo),
   gap: 0.45rem;
   padding: 0.35rem 0.85rem;
   border-radius: 9999px;
-  background: rgba(251, 219, 175, 0.2);
-  border: 1px solid rgba(251, 219, 175, 0.45);
-  color: #FBDBAF;
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: #A78BFA;
   font-size: 0.76rem;
   font-weight: 800;
   width: fit-content;
@@ -282,17 +314,16 @@ spline-viewer::part(logo),
 }
 
 .hero-stage-title {
-  font-family: 'Space Grotesk', 'Orbitron-Medium', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: clamp(1.8rem, 3.2vw, 2.75rem);
   font-weight: 900;
-  line-height: 1.1;
+  line-height: 1.15;
   letter-spacing: -0.03em;
   color: #ffffff;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
 }
 
 .hero-stage-title span {
-  background: linear-gradient(135deg, #FBDBAF 20%, #E07020 90%);
+  background: linear-gradient(135deg, #A78BFA 0%, #06B6D4 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -300,24 +331,160 @@ spline-viewer::part(logo),
 .hero-stage-sub {
   font-size: 0.98rem;
   line-height: 1.5;
-  color: rgba(251, 219, 175, 0.9);
+  color: var(--text-muted);
   max-width: 520px;
 }
 
-/* 3D Robot Mascot Container */
+/* 3D Robot Mascot Container & Speaking Stage */
 .hero-robot-container {
   position: relative;
   width: 100%;
-  height: 260px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
+  height: 310px;
+  background: rgba(14, 19, 32, 0.75);
+  border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 1px solid rgba(251, 219, 175, 0.5);
-  box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+/* Real-Time Robot Speech HUD (Pretending the Robot is Talking) */
+.robot-speech-hud {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  right: 14px;
+  background: rgba(8, 12, 22, 0.9);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 16px;
+  padding: 0.75rem 1rem;
+  z-index: 20;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.robot-speech-hud.is-talking {
+  border-color: #06B6D4;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+}
+
+.robot-speech-hud.is-interrupted {
+  border-color: #F43F5E;
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.4);
+}
+
+.speech-hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.speech-live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.speech-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--primary-emerald);
+  box-shadow: 0 0 8px var(--primary-emerald);
+  animation: pulseDot 1.5s infinite;
+}
+
+.speech-hud-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary-cyan);
+}
+
+.speech-eq-bars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 12px;
+}
+
+.speech-eq-bars span {
+  width: 3px;
+  height: 4px;
+  background-color: var(--primary-purple);
+  border-radius: 2px;
+  transition: height 0.15s ease;
+}
+
+.robot-speech-hud.is-talking .speech-eq-bars span {
+  animation: eqBounce 0.6s infinite ease-in-out alternate;
+}
+
+.robot-speech-hud.is-talking .speech-eq-bars span:nth-child(1) { animation-delay: 0.1s; }
+.robot-speech-hud.is-talking .speech-eq-bars span:nth-child(2) { animation-delay: 0.25s; }
+.robot-speech-hud.is-talking .speech-eq-bars span:nth-child(3) { animation-delay: 0.4s; }
+.robot-speech-hud.is-talking .speech-eq-bars span:nth-child(4) { animation-delay: 0.15s; }
+.robot-speech-hud.is-talking .speech-eq-bars span:nth-child(5) { animation-delay: 0.3s; }
+
+@keyframes eqBounce {
+  0% { height: 3px; background-color: var(--primary-purple); }
+  100% { height: 12px; background-color: var(--primary-cyan); }
+}
+
+.coach-speech-text {
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: #FFFFFF;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.speech-hud-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-subtle);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 0.3rem;
+  margin-top: 0.1rem;
+}
+
+.speech-latency-tag {
+  color: #10B981;
+}
+
+/* Robot Talking Concentric Wave Aura */
+.robot-aura.talking-pulse {
+  animation: coachSpeechAura 1.4s infinite ease-out;
+}
+
+@keyframes coachSpeechAura {
+  0% {
+    transform: scale(0.95);
+    background: radial-gradient(circle at center, rgba(6, 182, 212, 0.3) 0%, rgba(139, 92, 246, 0.15) 50%, transparent 75%);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    background: radial-gradient(circle at center, rgba(139, 92, 246, 0.35) 0%, rgba(6, 182, 212, 0.2) 60%, transparent 80%);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.95);
+    background: radial-gradient(circle at center, rgba(6, 182, 212, 0.3) 0%, rgba(139, 92, 246, 0.15) 50%, transparent 75%);
+    opacity: 1;
+  }
 }
 
 /* Conversational Natural Voice Box (Zero Word Restrictions) */
@@ -325,9 +492,9 @@ spline-viewer::part(logo),
   margin-top: 0.85rem;
   padding: 0.85rem;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid var(--panel-border);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  background: rgba(15, 20, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
 .conversational-badge {
@@ -341,7 +508,7 @@ spline-viewer::part(logo),
 
 .conversational-desc {
   font-size: 0.78rem;
-  color: var(--text-body);
+  color: var(--text-muted);
   line-height: 1.45;
   margin-top: 0.35rem;
 }
@@ -357,126 +524,22 @@ spline-viewer::part(logo),
   font-size: 0.75rem;
   padding: 0.35rem 0.65rem;
   border-radius: 8px;
-  background: #f8fafc;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  color: var(--text-headline);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-body);
   font-weight: 600;
   transition: all 0.2s ease;
 }
 
 .voice-chip:hover {
-  background: #ffffff;
+  background: rgba(139, 92, 246, 0.15);
   border-color: var(--primary-purple);
+  color: #FFFFFF;
 }
 
-.spec-label {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--label);
-}
-
-.spec-value {
-  font-size: 12.5px;
-  color: var(--cream);
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* =========================================================
-   CYBER RONIN ANIMATIONS & BREAKPOINTS
-   ========================================================= */
-
-@keyframes heroImageIn {
-  from { opacity: 0; transform: scale(1.18); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.hero-image-animate {
-  opacity: 0;
-  animation: heroImageIn 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  animation-delay: 0.15s;
-}
-
-@keyframes wordPullUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
+/* Clean athletic transition */
 .pull-word {
   display: inline-block;
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-.pull-word:not(:last-child) {
-  margin-right: 0.3em;
-}
-
-.words-visible .pull-word {
-  animation: wordPullUp 0.55s ease forwards;
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(14px); filter: blur(8px); }
-  to { opacity: 1; transform: translateY(0); filter: blur(0); }
-}
-
-.fade-up-reveal {
-  opacity: 0;
-  transform: translateY(14px);
-  filter: blur(8px);
-}
-
-.fade-up-reveal.is-visible {
-  animation: fadeUp 0.7s ease forwards;
-}
-
-@media (max-width: 1024px) {
-  .hero-ui { padding: 32px 28px 36px; }
-  .hero-page { top: 32px; right: 28px; }
-  .specs { width: min(300px, 100%); }
-}
-
-@media (max-width: 900px) {
-  .hero-ui { padding: 28px 22px 28px; }
-  .hero-page { top: 28px; right: 22px; }
-  .hero-copy h1 { font-size: clamp(1.35rem, 7.2vw, 2.4rem); }
-  .hero-base-img, .hero-reveal-img { background-position: 40% center; }
-  .specs { width: min(280px, 100%); }
-}
-
-@media (max-width: 768px) {
-  .hero-ui {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto;
-    padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
-  }
-  .hero-left { grid-column: 1; grid-row: 1 / 3; gap: 24px; }
-  .hero-page { top: max(24px, env(safe-area-inset-top)); right: max(20px, env(safe-area-inset-right)); }
-  .specs { grid-column: 1; grid-row: 3; justify-self: stretch; width: 100%; margin-top: 8px; }
-  .hero-base-img, .hero-reveal-img { background-position: 40% center; }
-}
-
-@media (max-width: 720px) {
-  .cyber-ronin-hero { height: auto; min-height: 100vh; min-height: 100dvh; }
-  .hero-ui {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    min-height: 100dvh;
-    justify-content: flex-start;
-    gap: 28px;
-    padding: max(22px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
-  }
-  .hero-left { grid-column: auto; grid-row: auto; width: 100%; justify-content: flex-start; }
-  .hero-copy { max-width: 100%; padding-right: 48px; }
-  .hero-copy p { font-size: 12.5px; max-width: 100%; }
-  .product-card { width: 100%; }
-  .specs { width: 100%; margin-top: auto; padding-top: 4px; }
-  .spec-value { white-space: normal; }
-  .hero-base-img, .hero-reveal-img { position: absolute; background-position: 40% center; }
 }
 
 @media (max-width: 480px) {
@@ -490,11 +553,6 @@ spline-viewer::part(logo),
   .icon-row { margin-top: 16px; gap: 8px; }
   .icon-btn { width: 34px; height: 34px; }
   .hero-left { gap: 22px; }
-  .product-card { grid-template-columns: 72px 1fr; gap: 8px 12px; padding: 10px; border-radius: 14px; }
-  .product-thumb { width: 72px; min-height: 72px; border-radius: 10px; }
-  .product-body h2 { font-size: 10px; }
-  .product-body p { font-size: 11px; }
-  .cart-btn { padding: 6px 14px; font-size: 11px; }
   .specs h3 { font-size: 10px; margin-bottom: 10px; }
   .spec-row { padding: 6px 0; gap: 10px; }
   .spec-label, .spec-value { font-size: 11px; }
@@ -761,10 +819,10 @@ spline-viewer::part(logo),
 .routine-selector {
   display: flex;
   gap: 0.4rem;
-  background: rgba(241, 245, 249, 0.9);
+  background: rgba(255, 255, 255, 0.04);
   padding: 0.25rem;
   border-radius: 12px;
-  border: 1px solid rgba(203, 213, 225, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 0.8rem;
   width: 100%;
 }
@@ -783,15 +841,15 @@ spline-viewer::part(logo),
 }
 
 .routine-pill:hover {
-  color: var(--text-headline);
-  background: rgba(255, 255, 255, 0.6);
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .routine-pill.active {
-  background: #ffffff;
-  color: var(--primary-purple);
-  border: 1px solid rgba(124, 58, 237, 0.2);
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.15);
+  background: rgba(139, 92, 246, 0.25);
+  color: #FFFFFF;
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
 }
 
 /* Gym HUD Section */
@@ -816,27 +874,27 @@ spline-viewer::part(logo),
   letter-spacing: 0.08em;
   padding: 0.25rem 0.75rem;
   border-radius: 8px;
-  background: rgba(241, 245, 249, 0.9);
-  border: 1px solid rgba(203, 213, 225, 0.8);
-  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-body);
 }
 
 .state-tag.active-workout {
-  background: rgba(124, 58, 237, 0.1);
-  border-color: rgba(124, 58, 237, 0.3);
-  color: var(--primary-purple);
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #C4B5FD;
 }
 
 .state-tag.active-rest {
-  background: rgba(217, 119, 6, 0.1);
-  border-color: rgba(217, 119, 6, 0.3);
-  color: var(--primary-amber);
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #FDE68A;
 }
 
 .state-tag.interrupted {
-  background: rgba(225, 29, 72, 0.12);
-  border-color: rgba(225, 29, 72, 0.35);
-  color: var(--primary-rose);
+  background: rgba(244, 63, 94, 0.2);
+  border-color: rgba(244, 63, 94, 0.5);
+  color: #FDA4AF;
   animation: flashTag 0.3s ease-in-out;
 }
 
@@ -1021,20 +1079,20 @@ spline-viewer::part(logo),
 .btn-secondary {
   flex: 1;
   padding: 0.9rem 1rem;
-  background: #ffffff;
-  color: var(--text-headline);
-  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 /* Pacing Toolbar */
@@ -1049,8 +1107,8 @@ spline-viewer::part(logo),
 }
 
 .pacing-btn {
-  background: #ffffff;
-  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text-muted);
   padding: 0.25rem 0.6rem;
   border-radius: 8px;
@@ -1060,10 +1118,15 @@ spline-viewer::part(logo),
   transition: all 0.15s ease;
 }
 
+.pacing-btn:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .pacing-btn.active {
-  background: rgba(124, 58, 237, 0.1);
+  background: rgba(139, 92, 246, 0.25);
   border-color: var(--primary-purple);
-  color: var(--primary-purple);
+  color: #FFFFFF;
   font-weight: 700;
 }
 
@@ -1094,9 +1157,9 @@ spline-viewer::part(logo),
 
 .badge-count {
   font-size: 0.72rem;
-  background: rgba(225, 29, 72, 0.1);
-  border: 1px solid rgba(225, 29, 72, 0.3);
-  color: var(--primary-rose);
+  background: rgba(225, 29, 72, 0.15);
+  border: 1px solid rgba(225, 29, 72, 0.4);
+  color: #FDA4AF;
   padding: 0.15rem 0.55rem;
   border-radius: 9999px;
   font-weight: 800;
@@ -1104,8 +1167,8 @@ spline-viewer::part(logo),
 
 /* Mic Live Status Card */
 .mic-status-card {
-  background: rgba(248, 250, 252, 0.95);
-  border: 1px solid var(--panel-border);
+  background: rgba(14, 19, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   padding: 0.85rem;
   display: flex;
@@ -1117,8 +1180,8 @@ spline-viewer::part(logo),
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: rgba(124, 58, 237, 0.1);
-  border: 1px solid rgba(124, 58, 237, 0.3);
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1131,15 +1194,15 @@ spline-viewer::part(logo),
 }
 
 .mic-visualizer.speaking {
-  background: rgba(225, 29, 72, 0.15);
+  background: rgba(225, 29, 72, 0.2);
   border-color: var(--primary-rose);
   box-shadow: 0 0 16px var(--primary-rose-glow);
 }
 
 @keyframes pulseMic {
-  0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(124, 58, 237, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
 }
 
 .mic-details {
@@ -1157,40 +1220,18 @@ spline-viewer::part(logo),
 .mic-transcript {
   font-size: 0.92rem;
   font-weight: 700;
-  color: var(--primary-purple);
+  color: #A78BFA;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 260px;
 }
 
-/* Voice Commands Grid */
-.commands-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-  margin-top: 0.45rem;
-}
-
-.command-chip {
-  background: #ffffff;
-  border: 1px solid var(--panel-border);
-  border-radius: 10px;
-  padding: 0.45rem 0.65rem;
-  font-size: 0.75rem;
-  color: var(--text-body);
-  font-weight: 500;
-}
-
-.command-chip strong {
-  color: var(--primary-purple);
-}
-
 /* Pronunciation Lab (Hard Voice Problem 2) */
 .pronunciation-box {
   margin-top: 0.75rem;
-  background: rgba(248, 250, 252, 0.95);
-  border: 1px solid rgba(2, 132, 199, 0.25);
+  background: rgba(6, 182, 212, 0.05);
+  border: 1px solid rgba(6, 182, 212, 0.2);
   border-radius: 14px;
   padding: 0.85rem;
 }
@@ -1222,8 +1263,8 @@ spline-viewer::part(logo),
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #ffffff;
-  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 0.4rem 0.7rem;
   font-size: 0.76rem;
@@ -1233,7 +1274,7 @@ spline-viewer::part(logo),
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: var(--text-body);
+  color: #FFFFFF;
 }
 
 .test-pair-vs {
@@ -1242,9 +1283,9 @@ spline-viewer::part(logo),
 }
 
 .btn-compare-audio {
-  background: rgba(2, 132, 199, 0.1);
-  border: 1px solid rgba(2, 132, 199, 0.3);
-  color: var(--primary-cyan);
+  background: rgba(6, 182, 212, 0.15);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: #22D3EE;
   font-size: 0.72rem;
   font-weight: 700;
   padding: 0.25rem 0.6rem;
@@ -1261,8 +1302,8 @@ spline-viewer::part(logo),
 /* AI Coach Brain Question Card */
 .ai-coach-box {
   margin-top: 0.75rem;
-  background: rgba(124, 58, 237, 0.05);
-  border: 1px solid rgba(124, 58, 237, 0.2);
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.2);
   border-radius: 14px;
   padding: 0.85rem;
 }
@@ -1278,7 +1319,7 @@ spline-viewer::part(logo),
   font-family: 'Space Grotesk', sans-serif;
   font-size: 0.82rem;
   font-weight: 800;
-  color: var(--primary-purple);
+  color: #C4B5FD;
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -1291,18 +1332,18 @@ spline-viewer::part(logo),
 
 .ai-input {
   flex: 1;
-  background: #ffffff;
-  border: 1px solid var(--panel-border);
+  background: rgba(8, 12, 22, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   padding: 0.45rem 0.75rem;
-  color: var(--text-headline);
+  color: #FFFFFF;
   font-size: 0.82rem;
   outline: none;
 }
 
 .ai-input:focus {
   border-color: var(--primary-purple);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
 }
 
 .ai-ask-btn {
@@ -1324,8 +1365,8 @@ spline-viewer::part(logo),
 
 /* Acceptance Test Log Console */
 .log-console {
-  background: #0f172a;
-  border: 1px solid #1e293b;
+  background: rgba(6, 9, 16, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   padding: 0.9rem;
   font-family: 'JetBrains Mono', monospace;
@@ -1361,20 +1402,20 @@ spline-viewer::part(logo),
   flex: 1;
   min-width: 110px;
   padding: 0.5rem 0.65rem;
-  background: #ffffff;
-  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
-  color: var(--text-headline);
+  color: #FFFFFF;
   font-size: 0.74rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   transition: all 0.15s ease;
 }
 
 .test-btn:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .test-btn.danger {
