@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Gym Voice Coach (Rime TTS + Instant Interruption)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo-icon">🎙️</div>
+      <div>
+        <h1>VOICE GYM COACH</h1>
+      </div>
+    </div>
+    <div id="engine-status" class="engine-status-badge">
+      <span class="pulse-dot"></span>
+      <span id="engine-text">Checking Rime.ai Engine...</span>
+    </div>
+  </header>
+
+  <!-- Main Grid Dashboard -->
+  <main class="main-content">
+    
+    <!-- Left Column: Workout HUD -->
+    <section class="glass-panel hud-section">
+      <div class="exercise-badge-row">
+        <span id="state-badge" class="state-tag">READY</span>
+        <span id="set-badge" class="state-tag">SET 1 OF 3</span>
+      </div>
+
+      <div>
+        <h2 id="exercise-name" class="exercise-title">Push-Ups</h2>
+        <p id="workout-target" class="set-subtitle">Target: 8 Reps • 30s Rest</p>
+      </div>
+
+      <!-- Circular Progress Ring & Numbers -->
+      <div class="circle-container">
+        <svg class="circle-svg" viewBox="0 0 240 240">
+          <circle class="circle-bg" cx="120" cy="120" r="100"></circle>
+          <circle id="circle-progress" class="circle-progress" cx="120" cy="120" r="100"></circle>
+        </svg>
+        <div class="circle-inner">
+          <div id="hud-number" class="hud-big-number">0</div>
+          <div id="hud-label" class="hud-number-label">REPS</div>
+        </div>
+      </div>
+
+      <!-- Real-time Coach Speech Bubble -->
+      <div class="coach-speech-card">
+        <div class="coach-avatar">🤖</div>
+        <div class="coach-text-container">
+          <div class="coach-meta">Coach Celeste (Rime.ai Coda)</div>
+          <div id="coach-subtitle" class="coach-text">"Tap Start Workout or say 'Start' to begin."</div>
+        </div>
+      </div>
+
+      <!-- Primary Controls -->
+      <div class="controls-row">
+        <button id="btn-toggle-workout" class="btn-primary">
+          <span id="btn-icon">▶</span>
+          <span id="btn-label">START WORKOUT</span>
+        </button>
+        <button id="btn-skip-rest" class="btn-secondary" style="display: none;">
+          SKIP REST ⏭
+        </button>
+      </div>
+    </section>
+
+    <!-- Right Column: Voice Status & Interruption Proof Console -->
+    <aside class="side-column">
+      
+      <!-- Microphone Status -->
+      <div class="glass-panel">
+        <div class="section-heading">
+          <h2>🎙️ Voice Barge-In Mic</h2>
+          <span id="mic-indicator" class="state-tag">STANDBY</span>
+        </div>
+        
+        <div class="mic-status-card">
+          <div id="mic-visualizer" class="mic-visualizer">🎤</div>
+          <div class="mic-details">
+            <div class="mic-label">Heard Speech</div>
+            <div id="heard-transcript" class="mic-transcript">Listening for commands...</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+          <span class="mic-label">Spoken Commands You Can Say Anytime:</span>
+          <div class="commands-grid">
+            <div class="command-chip"><strong>"Skip rest"</strong> → Next set</div>
+            <div class="command-chip"><strong>"Stop" / "Pause"</strong> → Halt coach</div>
+            <div class="command-chip"><strong>"Next exercise"</strong> → Move on</div>
+            <div class="command-chip"><strong>"Add 10 seconds"</strong> → Rest +10s</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acceptance Test Proof Console -->
+      <div class="glass-panel" style="flex: 1;">
+        <div class="section-heading">
+          <h2>⚡ Interruption Audit Log</h2>
+          <span id="interrupt-count" class="badge-count">0 Interrupts</span>
+        </div>
+        
+        <div id="log-console" class="log-console">
+          <div class="log-entry info">[System] Coach initialized. Audio bus ready.</div>
+        </div>
+
+        <!-- Quick Simulation triggers for testing in quiet environments -->
+        <div class="test-actions-row">
+          <button id="test-voice-skip" class="test-btn danger">⚡ Test Barge-In ("Skip Rest")</button>
+          <button id="test-voice-stop" class="test-btn">🛑 Test "Pause"</button>
+          <button id="clear-logs" class="test-btn">Clear Log</button>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- Modular Scripts -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
