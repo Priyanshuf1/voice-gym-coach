@@ -4,11 +4,34 @@
  * Ensures zero stale timer leaks, clean state transitions, and immediate recovery from interrupts.
  */
 
-export const WORKOUT_PLAN = [
-  { id: 'pushups', name: 'Push-Ups', sets: 3, reps: 8, restSeconds: 30 },
-  { id: 'squats', name: 'Bodyweight Squats', sets: 3, reps: 10, restSeconds: 30 },
-  { id: 'lunges', name: 'Walking Lunges', sets: 3, reps: 10, restSeconds: 25 }
-];
+export const WORKOUT_ROUTINES = {
+  full_body: {
+    name: 'Full Body Burn',
+    exercises: [
+      { id: 'pushups', name: 'Push-Ups', sets: 3, reps: 8, restSeconds: 30 },
+      { id: 'squats', name: 'Bodyweight Squats', sets: 3, reps: 10, restSeconds: 30 },
+      { id: 'climbers', name: 'Mountain Climbers', sets: 3, reps: 12, restSeconds: 25 }
+    ]
+  },
+  upper_body: {
+    name: 'Upper Body Power',
+    exercises: [
+      { id: 'diamond_pushups', name: 'Diamond Push-ups', sets: 3, reps: 8, restSeconds: 30 },
+      { id: 'pike_pushups', name: 'Pike Push-ups', sets: 3, reps: 8, restSeconds: 35 },
+      { id: 'dips', name: 'Bench Dips', sets: 3, reps: 10, restSeconds: 30 }
+    ]
+  },
+  core_mobility: {
+    name: 'Core & Mobility',
+    exercises: [
+      { id: 'plank', name: 'Plank Hold', sets: 3, reps: 20, restSeconds: 25 },
+      { id: 'birddog', name: 'Bird-Dog Extensions', sets: 3, reps: 10, restSeconds: 20 },
+      { id: 'crunches', name: 'Bicycle Crunches', sets: 3, reps: 12, restSeconds: 25 }
+    ]
+  }
+};
+
+export const WORKOUT_PLAN = WORKOUT_ROUTINES.full_body.exercises;
 
 export const STATES = {
   IDLE: 'IDLE',
@@ -20,12 +43,18 @@ export const STATES = {
 };
 
 export class WorkoutStateMachine {
-  constructor({ audioController, onStateChange, onTick, onRep, onLog }) {
+  constructor({ audioController, soundFx, onStateChange, onTick, onRep, onLog }) {
     this.audio = audioController;
+    this.soundFx = soundFx;
     this.onStateChange = onStateChange || (() => {});
     this.onTick = onTick || (() => {});
     this.onRep = onRep || (() => {});
     this.onLog = onLog || (() => {});
+
+    // Routine & Settings
+    this.routineKey = 'full_body';
+    this.currentPlan = WORKOUT_ROUTINES.full_body.exercises;
+    this.repPacingMs = 2200; // Default pacing
 
     // State Variables
     this.state = STATES.IDLE;
@@ -41,8 +70,27 @@ export class WorkoutStateMachine {
     this.isRepLoopActive = false;
   }
 
+  setRoutine(routineKey) {
+    if (WORKOUT_ROUTINES[routineKey]) {
+      this.clearAllTimers();
+      this.routineKey = routineKey;
+      this.currentPlan = WORKOUT_ROUTINES[routineKey].exercises;
+      this.exerciseIndex = 0;
+      this.currentSet = 1;
+      this.currentRep = 0;
+      this.state = STATES.IDLE;
+      this.notifyState();
+      this.onLog(`📋 Switched routine to: ${WORKOUT_ROUTINES[routineKey].name}`, 'info');
+    }
+  }
+
+  setPacing(pacingMs) {
+    this.repPacingMs = Math.max(1200, Math.min(4000, pacingMs));
+    this.onLog(`⚡ Rep pacing set to ${(this.repPacingMs / 1000).toFixed(1)}s per rep`, 'info');
+  }
+
   get currentExercise() {
-    return WORKOUT_PLAN[this.exerciseIndex] || WORKOUT_PLAN[0];
+    return this.currentPlan[this.exerciseIndex] || this.currentPlan[0];
   }
 
   getContext() {
@@ -121,6 +169,9 @@ export class WorkoutStateMachine {
     else if (this.currentRep === this.currentExercise.reps - 1) cue = `${this.currentRep}, one more!`;
     else if (this.currentRep === this.currentExercise.reps) cue = `${this.currentRep}, and down! Set finished.`;
 
+    // Play crisp rep chime
+    if (this.soundFx) this.soundFx.playRepDing();
+
     await this.audio.speak(cue);
 
     if (!this.isRepLoopActive || this.state !== STATES.EXERCISE_REPS) return;
@@ -128,10 +179,10 @@ export class WorkoutStateMachine {
     if (this.currentRep >= this.currentExercise.reps) {
       this.finishCurrentSet();
     } else {
-      // Rep pacing delay (e.g. 2.2 seconds per rep)
+      // Rep pacing delay
       this.repTimeout = setTimeout(() => {
         this.runNextRep();
-      }, 2200);
+      }, this.repPacingMs);
     }
   }
 
@@ -146,7 +197,7 @@ export class WorkoutStateMachine {
       this.startRestTimer(this.currentExercise.restSeconds);
     } else {
       // Exercise finished, check if there's a next exercise
-      if (this.exerciseIndex < WORKOUT_PLAN.length - 1) {
+      if (this.exerciseIndex < this.currentPlan.length - 1) {
         this.exerciseIndex++;
         this.currentSet = 1;
         this.onLog(`✅ Completed all sets of previous exercise. Moving to ${this.currentExercise.name}`, 'success');
@@ -170,6 +221,8 @@ export class WorkoutStateMachine {
     this.restTimeRemaining = seconds;
     this.notifyState();
 
+    if (this.soundFx) this.soundFx.playRestGong();
+
     const speechText = customAnnouncement || `Rest for ${seconds} seconds. Take deep breaths.`;
     this.onLog(`⏱️ Rest period started (${seconds}s)`, 'info');
 
@@ -186,6 +239,11 @@ export class WorkoutStateMachine {
 
         this.restTimeRemaining--;
         this.onTick(this.restTimeRemaining, this.totalRestTime);
+
+        // Sound tick in last 5 seconds
+        if (this.restTimeRemaining <= 5 && this.restTimeRemaining > 0 && this.soundFx) {
+          this.soundFx.playTick();
+        }
 
         // Announce remaining time cues
         if (this.restTimeRemaining === 10) {
@@ -214,6 +272,8 @@ export class WorkoutStateMachine {
    */
   skipRest() {
     this.onLog(`⚡ [STATE-MACHINE] skipRest() called. Destroying background rest interval.`, 'interrupt');
+
+    if (this.soundFx) this.soundFx.playBargeInGlitch();
 
     // 1. Instantly destroy background timer
     this.clearAllTimers();

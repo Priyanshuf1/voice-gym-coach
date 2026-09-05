@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Gym Voice Coach (Rime TTS + Instant Interruption)</title>
+  <title>AI Gym Voice Coach — Rime TTS & Barge-In</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -19,17 +19,43 @@
         <h1>VOICE GYM COACH</h1>
       </div>
     </div>
-    <div id="engine-status" class="engine-status-badge">
-      <span class="pulse-dot"></span>
-      <span id="engine-text">Checking Rime.ai Engine...</span>
+
+    <div class="header-right">
+      <div class="badge-group">
+        <!-- Rime TTS Status -->
+        <div id="engine-status" class="engine-status-badge">
+          <span class="pulse-dot"></span>
+          <span id="engine-text">Checking Rime.ai Engine...</span>
+        </div>
+
+        <!-- Gemini Web2API Status -->
+        <div id="gemini-status" class="engine-status-badge purple">
+          <span class="pulse-dot"></span>
+          <span id="gemini-text">Gemini AI Brain Ready</span>
+        </div>
+      </div>
+
+      <!-- Master Audio Controls (Rabto Audio Direction) -->
+      <div class="audio-controls">
+        <button id="btn-mute" class="audio-btn" title="Toggle Sound">🔊</button>
+        <input type="range" id="vol-slider" class="vol-slider" min="0" max="1" step="0.05" value="0.7" title="Master Volume">
+      </div>
     </div>
   </header>
 
   <!-- Main Grid Dashboard -->
   <main class="main-content">
     
-    <!-- Left Column: Workout HUD -->
-    <section class="glass-panel hud-section">
+    <!-- Left Column: Workout HUD & Routines -->
+    <section class="glass-panel hud-section stripe-cyan">
+      
+      <!-- Routine Selector Pills (Rabto Bento style) -->
+      <div class="routine-selector">
+        <button class="routine-pill active" data-routine="full_body">🔥 Full Body</button>
+        <button class="routine-pill" data-routine="upper_body">💪 Upper Body</button>
+        <button class="routine-pill" data-routine="core_mobility">🧘 Core & Mobility</button>
+      </div>
+
       <div class="exercise-badge-row">
         <span id="state-badge" class="state-tag">READY</span>
         <span id="set-badge" class="state-tag">SET 1 OF 3</span>
@@ -42,15 +68,18 @@
 
       <!-- Circular Progress Ring & Numbers -->
       <div class="circle-container">
-        <svg class="circle-svg" viewBox="0 0 240 240">
-          <circle class="circle-bg" cx="120" cy="120" r="100"></circle>
-          <circle id="circle-progress" class="circle-progress" cx="120" cy="120" r="100"></circle>
+        <svg class="circle-svg" viewBox="0 0 220 220">
+          <circle class="circle-bg" cx="110" cy="110" r="90"></circle>
+          <circle id="circle-progress" class="circle-progress" cx="110" cy="110" r="90"></circle>
         </svg>
         <div class="circle-inner">
           <div id="hud-number" class="hud-big-number">0</div>
           <div id="hud-label" class="hud-number-label">REPS</div>
         </div>
       </div>
+
+      <!-- Live Web Audio Equalizer Waveform -->
+      <canvas id="visualizer-canvas" class="visualizer-canvas"></canvas>
 
       <!-- Real-time Coach Speech Bubble -->
       <div class="coach-speech-card">
@@ -71,13 +100,21 @@
           SKIP REST ⏭
         </button>
       </div>
+
+      <!-- Rep Pacing Selector -->
+      <div class="pacing-bar">
+        <span>Rep Pacing:</span>
+        <button class="pacing-btn" data-pacing="1600">⚡ Fast (1.6s)</button>
+        <button class="pacing-btn active" data-pacing="2200">Standard (2.2s)</button>
+        <button class="pacing-btn" data-pacing="3000">Slow Power (3.0s)</button>
+      </div>
     </section>
 
-    <!-- Right Column: Voice Status & Interruption Proof Console -->
+    <!-- Right Column: Voice Status, AI Assistant & Interruption Proof -->
     <aside class="side-column">
       
-      <!-- Microphone Status -->
-      <div class="glass-panel">
+      <!-- Microphone Status & Quick Commands -->
+      <div class="glass-panel stripe-purple">
         <div class="section-heading">
           <h2>🎙️ Voice Barge-In Mic</h2>
           <span id="mic-indicator" class="state-tag">STANDBY</span>
@@ -91,8 +128,19 @@
           </div>
         </div>
 
-        <div style="margin-top: 1rem;">
-          <span class="mic-label">Spoken Commands You Can Say Anytime:</span>
+        <!-- Conversational AI Coach Brain (Powered by gemini-web2api) -->
+        <div class="ai-coach-box">
+          <div class="ai-coach-header">
+            <span class="ai-coach-title">✨ AI Coach Brain (Ask Anything Mid-Workout)</span>
+          </div>
+          <div class="ai-input-row">
+            <input type="text" id="ai-prompt-input" class="ai-input" placeholder="e.g. 'Give me motivation', 'How do I breathe?'">
+            <button id="btn-ask-ai" class="ai-ask-btn">Ask</button>
+          </div>
+        </div>
+
+        <div style="margin-top: 0.6rem;">
+          <span class="mic-label">Instant Voice Commands (Say Anytime):</span>
           <div class="commands-grid">
             <div class="command-chip"><strong>"Skip rest"</strong> → Next set</div>
             <div class="command-chip"><strong>"Stop" / "Pause"</strong> → Halt coach</div>
@@ -103,7 +151,7 @@
       </div>
 
       <!-- Acceptance Test Proof Console -->
-      <div class="glass-panel" style="flex: 1;">
+      <div class="glass-panel stripe-rose" style="flex: 1;">
         <div class="section-heading">
           <h2>⚡ Interruption Audit Log</h2>
           <span id="interrupt-count" class="badge-count">0 Interrupts</span>
@@ -113,11 +161,12 @@
           <div class="log-entry info">[System] Coach initialized. Audio bus ready.</div>
         </div>
 
-        <!-- Quick Simulation triggers for testing in quiet environments -->
+        <!-- Quick Simulation triggers & Export -->
         <div class="test-actions-row">
           <button id="test-voice-skip" class="test-btn danger">⚡ Test Barge-In ("Skip Rest")</button>
           <button id="test-voice-stop" class="test-btn">🛑 Test "Pause"</button>
-          <button id="clear-logs" class="test-btn">Clear Log</button>
+          <button id="copy-logs" class="test-btn">📋 Copy Evidence</button>
+          <button id="clear-logs" class="test-btn">Clear</button>
         </div>
       </div>
 

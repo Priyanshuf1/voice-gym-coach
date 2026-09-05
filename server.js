@@ -10,16 +10,92 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+const GEMINI_API_URL = process.env.GEMINI_WEB2API_URL || 'http://localhost:8081/v1';
+
 // Config check endpoint
-app.get('/api/config', (req, res) => {
+app.get('/api/config', async (req, res) => {
   const apiKey = process.env.RIME_API_KEY;
   const isConfigured = !!apiKey && apiKey !== 'your_rime_api_key_here' && apiKey.trim().length > 10;
+  
+  // Check if gemini-web2api is running on port 8081
+  let isGeminiWeb2ApiLive = false;
+  try {
+    const check = await fetch(`${GEMINI_API_URL}/models`, { method: 'GET', signal: AbortSignal.timeout(1000) });
+    isGeminiWeb2ApiLive = check.ok;
+  } catch (e) {
+    isGeminiWeb2ApiLive = false;
+  }
+
   res.json({
     isRimeConfigured: isConfigured,
     model: 'coda',
     defaultSpeaker: 'celeste',
+    isGeminiWeb2ApiLive,
+    geminiUrl: GEMINI_API_URL,
     voiceEngine: isConfigured ? 'Rime.ai TTS' : 'Fallback Local Speech (Add RIME_API_KEY to .env for Rime)'
   });
+});
+
+// AI Coach Conversational Intelligence (Powered by gemini-web2api)
+app.post('/api/coach-ai', async (req, res) => {
+  const { prompt, workoutContext = {} } = req.body;
+  if (!prompt || typeof prompt !== 'string') {
+    return res.status(400).json({ error: 'Prompt is required' });
+  }
+
+  const systemMessage = `You are Coach Celeste, an elite athletic voice gym coach. The user is mid-workout (hands busy, listening via audio).
+Current Exercise: ${workoutContext.exerciseName || 'Push-ups'}, Set ${workoutContext.set || 1}, State: ${workoutContext.state || 'Active'}.
+RULES:
+1. Answer in 1 to 2 punchy, spoken sentences (MAX 25 words).
+2. NEVER use markdown, bullet points, asterisks, or emojis—this text will be spoken out loud by TTS.
+3. Be inspiring, direct, and authoritative like an Olympic trainer.`;
+
+  try {
+    // Attempt call to gemini-web2api (OpenAI-compatible format)
+    const geminiRes = await fetch(`${GEMINI_API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer sk-gemini'
+      },
+      body: JSON.stringify({
+        model: 'gemini-3.6-flash',
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 80
+      }),
+      signal: AbortSignal.timeout(5000)
+    });
+
+    if (geminiRes.ok) {
+      const data = await geminiRes.json();
+      const reply = data.choices?.[0]?.message?.content?.trim();
+      if (reply) {
+        return res.json({ reply, source: 'gemini-web2api' });
+      }
+    }
+  } catch (err) {
+    // Fallback to intelligent local coach heuristic if gemini-web2api server isn't running yet
+  }
+
+  // Fast offline heuristic coach replies for common workout inquiries
+  const lower = prompt.toLowerCase();
+  let fallbackReply = "Stay locked in! Breathe steady and push through this set.";
+
+  if (lower.includes('pain') || lower.includes('hurt') || lower.includes('shoulder') || lower.includes('knee')) {
+    fallbackReply = "If you feel sharp joint pain, pause immediately and shake it out. Safety comes first.";
+  } else if (lower.includes('motivat') || lower.includes('tired') || lower.includes('can\'t') || lower.includes('hard')) {
+    fallbackReply = "Every rep you do right now is where the real growth happens. Dig deep, you've got this!";
+  } else if (lower.includes('breathe') || lower.includes('breath')) {
+    fallbackReply = "Inhale deep on the way down, and exhale with power as you push up!";
+  } else if (lower.includes('form') || lower.includes('technique')) {
+    fallbackReply = "Keep your core braced tight and maintain full control through the entire range of motion.";
+  }
+
+  return res.json({ reply: fallbackReply, source: 'coach-heuristic' });
 });
 
 // Proxy endpoint for Rime.ai Text-To-Speech

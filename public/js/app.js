@@ -1,17 +1,24 @@
 /**
  * app.js
  * Main entry point for Voice Gym Coach
- * Orchestrates Rime TTS, AudioController, StateMachine, VoiceListener, and HUD.
+ * Orchestrates Rime TTS, AudioController, StateMachine, VoiceListener, SoundFX, and Rabto UI.
  */
 
 import { RimeClient } from './rimeClient.js';
 import { AudioController } from './audioController.js';
-import { WorkoutStateMachine, STATES } from './stateMachine.js';
+import { WorkoutStateMachine, STATES, WORKOUT_ROUTINES } from './stateMachine.js';
 import { VoiceListener } from './voiceListener.js';
+import { SoundFX } from './soundFx.js';
 
 // DOM Elements
 const engineStatusBadge = document.getElementById('engine-status');
 const engineText = document.getElementById('engine-text');
+const geminiStatusBadge = document.getElementById('gemini-status');
+const geminiText = document.getElementById('gemini-text');
+
+const btnMute = document.getElementById('btn-mute');
+const volSlider = document.getElementById('vol-slider');
+
 const stateBadge = document.getElementById('state-badge');
 const setBadge = document.getElementById('set-badge');
 const exerciseNameEl = document.getElementById('exercise-name');
@@ -20,6 +27,7 @@ const hudNumberEl = document.getElementById('hud-number');
 const hudLabelEl = document.getElementById('hud-label');
 const circleProgressEl = document.getElementById('circle-progress');
 const coachSubtitleEl = document.getElementById('coach-subtitle');
+
 const btnToggleWorkout = document.getElementById('btn-toggle-workout');
 const btnLabel = document.getElementById('btn-label');
 const btnIcon = document.getElementById('btn-icon');
@@ -33,15 +41,27 @@ const logConsole = document.getElementById('log-console');
 
 const testVoiceSkip = document.getElementById('test-voice-skip');
 const testVoiceStop = document.getElementById('test-voice-stop');
+const copyLogsBtn = document.getElementById('copy-logs');
 const clearLogsBtn = document.getElementById('clear-logs');
 
-// Metrics & Log State
-let interruptCount = 0;
-const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 100; // ~628.3
+const aiPromptInput = document.getElementById('ai-prompt-input');
+const btnAskAi = document.getElementById('btn-ask-ai');
+
+const routinePills = document.querySelectorAll('.routine-pill');
+const pacingBtns = document.querySelectorAll('.pacing-btn');
+const visualizerCanvas = document.getElementById('visualizer-canvas');
+
+// Circle Circumference for r=90
+const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 90; // ~565.48
 circleProgressEl.style.strokeDasharray = `${CIRCLE_CIRCUMFERENCE}`;
 circleProgressEl.style.strokeDashoffset = '0';
 
-// Helper to append logs
+// Initialize SoundFX
+const soundFx = new SoundFX();
+
+// Metrics & Log State
+let interruptCount = 0;
+
 function logMessage(text, type = 'info') {
   const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const entry = document.createElement('div');
@@ -72,6 +92,7 @@ const audioController = new AudioController(
 // 3. Initialize State Machine
 const stateMachine = new WorkoutStateMachine({
   audioController,
+  soundFx,
   onStateChange: (state, ctx) => {
     updateHUDState(state, ctx);
   },
@@ -106,6 +127,8 @@ function updateHUDState(state, ctx) {
     hudNumberEl.textContent = '0';
     hudLabelEl.textContent = 'REPS';
     circleProgressEl.style.strokeDashoffset = '0';
+    exerciseNameEl.textContent = ctx.exercise.name;
+    workoutTargetEl.textContent = `Target: ${ctx.exercise.reps} Reps • ${ctx.exercise.restSeconds}s Rest`;
   } else if (state === STATES.COUNTDOWN) {
     stateBadge.textContent = 'COUNTDOWN';
     stateBadge.classList.add('active-workout');
@@ -147,13 +170,12 @@ function updateHUDState(state, ctx) {
 
 // 4. Initialize Voice Listener with Barge-In Logic
 const voiceListener = new VoiceListener({
-  // Acoustic detection: speech starting
   onSpeechStart: () => {
     micVisualizer.classList.add('speaking');
     micIndicator.textContent = 'HEARING SPEECH';
     micIndicator.className = 'state-tag active-workout';
 
-    // If coach is speaking right now, user has started interrupting!
+    // If coach is speaking, user has started interrupting!
     if (audioController.isPlaying) {
       triggerBargeIn('Acoustic voice start detected over mic');
     }
@@ -191,9 +213,10 @@ function triggerBargeIn(reason) {
   
   // Flash state tag on screen
   stateBadge.classList.add('interrupted');
-  setTimeout(() => stateBadge.classList.remove('interrupted'), 500);
+  setTimeout(() => stateBadge.classList.remove('interrupted'), 400);
 
-  // Instantly cut audio playback and abort requests
+  // Play glitch sound effect and cut audio
+  soundFx.playBargeInGlitch();
   audioController.interrupt(reason);
 }
 
@@ -210,24 +233,20 @@ function handleSpokenCommand(command, rawText) {
         logMessage(`🎯 Executing: SKIP REST`, 'success');
         stateMachine.skipRest();
       } else {
-        logMessage(`ℹ️ User requested skip rest, but state is ${stateMachine.state}. Transitioning to next set.`, 'info');
         stateMachine.skipRest();
       }
       break;
 
     case 'PAUSE':
-      logMessage(`🎯 Executing: PAUSE WORKOUT`, 'info');
       stateMachine.pause();
       break;
 
     case 'RESUME':
-      logMessage(`🎯 Executing: RESUME WORKOUT`, 'success');
       stateMachine.resume();
       break;
 
     case 'ADD_REST':
       if (stateMachine.state === STATES.REST_TIMER) {
-        logMessage(`🎯 Executing: ADD 10s REST`, 'success');
         stateMachine.addRestSeconds(10);
       } else {
         audioController.speak("You can only add rest time during a rest period.");
@@ -235,7 +254,6 @@ function handleSpokenCommand(command, rawText) {
       break;
 
     case 'NEXT_EXERCISE':
-      logMessage(`🎯 Executing: NEXT EXERCISE`, 'success');
       stateMachine.nextExercise();
       break;
 
@@ -244,8 +262,82 @@ function handleSpokenCommand(command, rawText) {
   }
 }
 
+// Conversational AI Coach Brain (Powered by gemini-web2api)
+async function askAiCoach(question) {
+  if (!question || !question.trim()) return;
+
+  triggerBargeIn('User asked AI Coach question');
+  logMessage(`🤖 [AI INQUIRY] "${question}"`, 'user');
+
+  const ctx = stateMachine.getContext();
+  try {
+    const res = await fetch('/api/coach-ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: question,
+        workoutContext: {
+          exerciseName: ctx.exercise.name,
+          set: ctx.set,
+          state: ctx.state
+        }
+      })
+    });
+
+    const data = await res.json();
+    if (data.reply) {
+      logMessage(`✨ [AI COACH (${data.source})] "${data.reply}"`, 'success');
+      audioController.speak(data.reply, true);
+    }
+  } catch (err) {
+    console.error('Error contacting AI coach:', err);
+    audioController.speak("Keep your head in the game! Stay focused on your breathing.", true);
+  }
+}
+
+// Equalizer Waveform Animation
+function initWaveformVisualizer() {
+  if (!visualizerCanvas) return;
+  const ctx = visualizerCanvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = visualizerCanvas.clientWidth || 300;
+  const h = 26;
+  visualizerCanvas.width = w * dpr;
+  visualizerCanvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+
+  let phase = 0;
+  function draw() {
+    requestAnimationFrame(draw);
+    ctx.clearRect(0, 0, w, h);
+
+    const isLive = audioController.isPlaying || voiceListener.isListening;
+    const barCount = 36;
+    const barWidth = (w / barCount) - 3;
+
+    for (let i = 0; i < barCount; i++) {
+      let amp = 3;
+      if (audioController.isPlaying) {
+        amp = Math.sin(phase + i * 0.4) * 8 + 11;
+      } else if (voiceListener.isListening) {
+        amp = Math.sin(phase * 0.5 + i * 0.25) * 4 + 6;
+      }
+
+      ctx.fillStyle = audioController.isPlaying ? '#06b6d4' : (voiceListener.isListening ? '#10b981' : '#334155');
+      const x = i * (barWidth + 3);
+      const y = (h - amp) / 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barWidth, amp, 3);
+      ctx.fill();
+    }
+    phase += 0.15;
+  }
+  draw();
+}
+
 // Button Events
 btnToggleWorkout.addEventListener('click', () => {
+  soundFx.init();
   audioController.initAudioContext();
   voiceListener.start();
 
@@ -263,7 +355,57 @@ btnSkipRest.addEventListener('click', () => {
   stateMachine.skipRest();
 });
 
-// Simulated Voice Commands for debugging & quiet environments
+// Routine Switcher Events
+routinePills.forEach(pill => {
+  pill.addEventListener('click', () => {
+    routinePills.forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    const routineKey = pill.getAttribute('data-routine');
+    stateMachine.setRoutine(routineKey);
+  });
+});
+
+// Rep Pacing Selector Events
+pacingBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    pacingBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const pacingMs = parseInt(btn.getAttribute('data-pacing'), 10);
+    stateMachine.setPacing(pacingMs);
+  });
+});
+
+// Audio Volume & Mute Controls
+btnMute.addEventListener('click', () => {
+  soundFx.setMuted(!soundFx.isMuted);
+  btnMute.textContent = soundFx.isMuted ? '🔇' : '🔊';
+});
+
+volSlider.addEventListener('input', (e) => {
+  const vol = parseFloat(e.target.value);
+  soundFx.setVolume(vol);
+});
+
+// AI Coach Question Form
+btnAskAi.addEventListener('click', () => {
+  const q = aiPromptInput.value.trim();
+  if (q) {
+    askAiCoach(q);
+    aiPromptInput.value = '';
+  }
+});
+
+aiPromptInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const q = aiPromptInput.value.trim();
+    if (q) {
+      askAiCoach(q);
+      aiPromptInput.value = '';
+    }
+  }
+});
+
+// Simulated Voice Commands
 testVoiceSkip.addEventListener('click', () => {
   handleSpokenCommand('SKIP_REST', 'skip it, next set (simulated)');
 });
@@ -272,13 +414,23 @@ testVoiceStop.addEventListener('click', () => {
   handleSpokenCommand('PAUSE', 'stop (simulated)');
 });
 
+// Copy Evidence Log Button
+copyLogsBtn.addEventListener('click', () => {
+  const entries = Array.from(document.querySelectorAll('.log-entry')).map(e => e.textContent).join('\n');
+  navigator.clipboard.writeText(entries).then(() => {
+    logMessage('📋 Evidence log copied to clipboard for presentation!', 'success');
+  }).catch(() => {
+    logMessage('📋 Log ready for copying.', 'info');
+  });
+});
+
 clearLogsBtn.addEventListener('click', () => {
   logConsole.innerHTML = '<div class="log-entry info">[System] Log cleared.</div>';
 });
 
 // App Startup & Server Config Check
 async function initApp() {
-  logMessage('[System] Checking Rime TTS configuration with server...', 'info');
+  logMessage('[System] Checking Rime TTS & Gemini Web2API configuration...', 'info');
   const config = await rimeClient.checkConfig();
 
   if (config.isRimeConfigured) {
@@ -290,6 +442,18 @@ async function initApp() {
     engineText.textContent = `Local TTS Active (Add RIME_API_KEY for Rime)`;
     logMessage('ℹ️ RIME_API_KEY is not yet added in .env. Falling back to high-speed local speech synthesis so you can test interruption immediately!', 'info');
   }
+
+  if (config.isGeminiWeb2ApiLive) {
+    geminiStatusBadge.className = 'engine-status-badge purple';
+    geminiText.textContent = 'Gemini Web2API Connected (:8081)';
+    logMessage('✅ Connected to gemini-web2api on port 8081 for unlimited AI intelligence!', 'success');
+  } else {
+    geminiStatusBadge.className = 'engine-status-badge purple';
+    geminiText.textContent = 'AI Coach Brain Active';
+    logMessage('ℹ️ Local gemini-web2api server not detected on :8081. Using built-in athletic coach AI intelligence. (Run python gemini_web2api.py to activate full web2api).', 'info');
+  }
+
+  initWaveformVisualizer();
 }
 
 initApp();
