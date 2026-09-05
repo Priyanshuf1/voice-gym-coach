@@ -101,11 +101,68 @@
           <button class="btn-load-spline" id="btn-load-spline">Load Model</button>
         </div>
 
+        <!-- WebGL Status / Diagnostics Banner (Shown when WebGL 2 is disabled) -->
+        <div class="webgl-alert-banner" id="webgl-alert-banner" style="display: none;">
+          <div class="webgl-alert-icon">⚡</div>
+          <div class="webgl-alert-text">
+            <strong>WebGL 2 Acceleration is disabled in this browser.</strong>
+            <span>Active Cyber Mascot enabled! To run live Spline 3D: Turn on <em>"Use graphics acceleration when available"</em> in <code>chrome://settings/system</code>, then relaunch.</span>
+          </div>
+          <button class="btn-webgl-dismiss" id="btn-dismiss-webgl-alert" title="Dismiss notice">✕</button>
+        </div>
+
         <div id="robot-viewer-wrapper" class="robot-viewer-wrapper">
+          <!-- Hardware WebGL Spline 3D Stage (Populated dynamically if WebGL is supported) -->
           <div class="spline-3d-stage" id="spline-3d-stage">
             <div class="robot-aura" id="robot-aura"></div>
-            <!-- Original Interactive 3D Spline Robot (From First Version) -->
-            <spline-viewer id="spline-robot" loading-anim-type="spinner-small-dark" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
+          </div>
+
+          <!-- Graceful High-Tech 3D Cyber Mascot (Active when WebGL is disabled or loading) -->
+          <div class="cyber-mascot-stage" id="cyber-mascot-stage" style="display: none;">
+            <div class="mascot-hologram-ring"></div>
+            <div class="mascot-card" id="mascot-3d-card">
+              <!-- Animated SVG Cyber Athletic Robot Mascot -->
+              <svg class="mascot-svg" viewBox="0 0 200 220" width="180" height="200">
+                <defs>
+                  <radialGradient id="mascotGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.8"/>
+                    <stop offset="100%" stop-color="#2A9D8F" stop-opacity="0"/>
+                  </radialGradient>
+                  <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#2D3142"/>
+                    <stop offset="100%" stop-color="#1E222D"/>
+                  </linearGradient>
+                  <linearGradient id="armorGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#4F5D75"/>
+                    <stop offset="100%" stop-color="#2D3142"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="100" cy="110" r="75" fill="url(#mascotGlow)" opacity="0.4"/>
+                <path d="M 60 140 L 140 140 L 125 210 L 75 210 Z" fill="url(#bodyGrad)" stroke="#E07A5F" stroke-width="2"/>
+                <path d="M 70 145 L 130 145 L 120 185 L 80 185 Z" fill="url(#armorGrad)"/>
+                <path d="M 45 135 L 70 140 L 65 170 L 35 150 Z" fill="url(#armorGrad)" stroke="rgba(255,255,255,0.15)"/>
+                <path d="M 155 135 L 130 140 L 135 170 L 165 150 Z" fill="url(#armorGrad)" stroke="rgba(255,255,255,0.15)"/>
+                <rect x="90" y="120" width="20" height="22" rx="3" fill="#4F5D75"/>
+                <line x1="95" y1="123" x2="95" y2="139" stroke="#06B6D4" stroke-width="2"/>
+                <line x1="105" y1="123" x2="105" y2="139" stroke="#06B6D4" stroke-width="2"/>
+                <path d="M 65 55 Q 100 35 135 55 L 145 95 Q 100 125 55 95 Z" fill="url(#bodyGrad)" stroke="#4F5D75" stroke-width="2.5"/>
+                <path d="M 72 60 Q 100 45 128 60 L 135 90 Q 100 115 65 90 Z" fill="#1A1C23"/>
+                <path class="robot-visor-eye" d="M 75 72 Q 100 64 125 72 Q 100 86 75 72 Z" fill="#06B6D4"/>
+                <ellipse cx="100" cy="73" rx="14" ry="3.5" fill="#FFFFFF" opacity="0.9"/>
+                <circle cx="53" cy="80" r="9" fill="#E07A5F" stroke="#FFFFFF" stroke-width="1.5"/>
+                <circle cx="53" cy="80" r="4" fill="#FFFFFF"/>
+                <circle cx="147" cy="80" r="9" fill="#E07A5F" stroke="#FFFFFF" stroke-width="1.5"/>
+                <circle cx="147" cy="80" r="4" fill="#FFFFFF"/>
+                <circle cx="100" cy="165" r="14" fill="#1A1C23" stroke="#06B6D4" stroke-width="2"/>
+                <circle cx="100" cy="165" r="8" fill="#06B6D4"/>
+                <circle cx="100" cy="165" r="3" fill="#FFFFFF"/>
+              </svg>
+              <div class="mascot-laser-beam"></div>
+              <div class="mascot-label-pill">
+                <span class="pulse-dot-cyan"></span>
+                <span>CYBER COACH • 3D Biomechanics</span>
+              </div>
+            </div>
           </div>
         </div>
 

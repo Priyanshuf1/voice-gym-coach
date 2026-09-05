@@ -1026,13 +1026,36 @@ function initEvents() {
     });
   }
 
-  if (btnLoadSpline && customSplineInput && splineRobot) {
+  let isWebGLAvailable = false;
+  try {
+    const testCanvas = document.createElement('canvas');
+    const gl = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+    isWebGLAvailable = !!gl;
+  } catch (e) {
+    isWebGLAvailable = false;
+  }
+
+  if (btnLoadSpline && customSplineInput) {
     btnLoadSpline.addEventListener('click', () => {
       const url = customSplineInput.value.trim();
       if (!url) return;
+      if (!isWebGLAvailable) {
+        logMessage('⚠️ WebGL 2 is disabled in your browser. Enable Hardware Acceleration in chrome://settings/system to render Spline 3D.', 'interrupt');
+        return;
+      }
       try {
-        splineRobot.setAttribute('url', url);
-        logMessage(`✨ Loaded 3D Spline scene: ${url}`, 'success');
+        const splineStage = document.getElementById('spline-3d-stage');
+        let splineRobot = document.getElementById('spline-robot');
+        if (!splineRobot && splineStage) {
+          splineRobot = document.createElement('spline-viewer');
+          splineRobot.id = 'spline-robot';
+          splineRobot.setAttribute('loading-anim-type', 'spinner-small-dark');
+          splineStage.appendChild(splineRobot);
+        }
+        if (splineRobot) {
+          splineRobot.setAttribute('url', url);
+          logMessage(`✨ Loaded 3D Spline scene: ${url}`, 'success');
+        }
         if (customSplineDrawer) customSplineDrawer.style.display = 'none';
       } catch (err) {
         logMessage(`⚠️ Error loading 3D scene: ${err.message}`, 'interrupt');
@@ -1042,6 +1065,64 @@ function initEvents() {
       if (e.key === 'Enter') btnLoadSpline.click();
     });
   }
+
+  // WebGL 2 Detection & Automatic Cyber Mascot Fallback Hub
+  function initRobotStage() {
+    const splineStage = document.getElementById('spline-3d-stage');
+    const cyberMascot = document.getElementById('cyber-mascot-stage');
+    const webglBanner = document.getElementById('webgl-alert-banner');
+    const robotActionText = document.getElementById('robot-action-text');
+    const btnDismissBanner = document.getElementById('btn-dismiss-webgl-alert');
+
+    if (btnDismissBanner && webglBanner) {
+      btnDismissBanner.addEventListener('click', () => {
+        webglBanner.style.display = 'none';
+      });
+    }
+
+    if (!isWebGLAvailable) {
+      console.warn('[RobotStage] WebGL context is disabled in this browser. Gracefully activating 3D Cyber Mascot.');
+      if (splineStage) splineStage.style.display = 'none';
+      if (cyberMascot) cyberMascot.style.display = 'flex';
+      if (webglBanner) webglBanner.style.display = 'flex';
+      if (robotActionText) robotActionText.textContent = '3D CYBER MASCOT (ACTIVE)';
+    } else {
+      if (splineStage) {
+        splineStage.style.display = 'flex';
+        // Mount Spline viewer only when WebGL is verified active
+        let splineRobot = document.getElementById('spline-robot');
+        if (!splineRobot) {
+          splineRobot = document.createElement('spline-viewer');
+          splineRobot.id = 'spline-robot';
+          splineRobot.setAttribute('loading-anim-type', 'spinner-small-dark');
+          splineRobot.setAttribute('url', 'https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode');
+          splineStage.appendChild(splineRobot);
+        }
+      }
+      if (cyberMascot) cyberMascot.style.display = 'none';
+      if (webglBanner) webglBanner.style.display = 'none';
+      if (robotActionText) robotActionText.textContent = '3D ROBOT COACH (SPLINE)';
+    }
+
+    // Interactive 3D Mouse Parallax Tilt for Cyber Mascot
+    const canvasWrapper = document.getElementById('robot-canvas-wrapper');
+    const mascotCard = document.getElementById('mascot-3d-card');
+    if (canvasWrapper && mascotCard) {
+      canvasWrapper.addEventListener('mousemove', (e) => {
+        const rect = canvasWrapper.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        const rotY = (x * 24).toFixed(1);
+        const rotX = (-y * 18).toFixed(1);
+        mascotCard.style.transform = `perspective(800px) rotateY(${rotY}deg) rotateX(${rotX}deg) translateZ(10px)`;
+      });
+      canvasWrapper.addEventListener('mouseleave', () => {
+        mascotCard.style.transform = 'perspective(800px) rotateY(0deg) rotateX(0deg) translateZ(0px)';
+      });
+    }
+  }
+
+  initRobotStage();
 
   // Live Hands-Free Mic Toggle Button
   const btnMicToggle = document.getElementById('btn-mic-toggle');
