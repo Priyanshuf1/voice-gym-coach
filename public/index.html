@@ -54,31 +54,42 @@
     </div>
   </header>
 
-  <!-- High-Performance Rabto Athletic Canvas Background (Subtle Grid & Ambient Lighting) -->
+  <!-- High-Performance Architectural Studio Canvas (Engineering Dot Grid) -->
   <div class="athletic-matrix-bg">
     <div class="athletic-grid-pattern"></div>
-    <div class="ambient-glow glow-violet"></div>
-    <div class="ambient-glow glow-cyan"></div>
-    <div class="ambient-glow glow-emerald"></div>
   </div>
 
   <!-- Interactive 3D Robot Hero Stage (Workout-Matching Actions & Direct Robot Voice) -->
   <section class="hero-robot-stage">
     <div class="hero-stage-content">
       <div class="hero-stage-pill">
-        <span>⚡</span> Hands-Free Conversational Voice Coach
+        <span class="pulse-dot-emerald"></span> Autonomous Conversational AI Gym Coach
       </div>
-      <h1 class="hero-stage-title">Speak Naturally. The AI Coach Listens <span>Mid-Rep.</span></h1>
+      <h1 class="hero-stage-title">Hands-Free Conversational <span>AI Coach</span></h1>
       <p class="hero-stage-sub">
-        No button taps. No word limitations. Say "start", "pause", or ask "how is my form?" to get instant spoken biomechanical guidance.
+        Talk naturally mid-rep. Interrupt instantly (&lt;1ms). Ask biomechanics questions or report pain — the AI detects your distress and guides your form.
       </p>
     </div>
 
-    <!-- 3D Interactive Mascot (Spline Robot as Direct AI Voice Coach) -->
+    <!-- 3D Interactive Mascot (Spline Robot with Unified Hearing & Speaking Neural Interface) -->
     <div class="hero-robot-container" id="robot-container">
       <div id="robot-aura" class="robot-aura"></div>
 
-      <!-- Real-Time Coach Speech HUD Attached Directly to the Robot -->
+      <!-- 1. Robot Neural Ear Sensor (Live Hearing Attached to Robot Head) -->
+      <div class="robot-ear-hud" id="robot-ear-hud">
+        <div class="ear-hud-header">
+          <div class="ear-live-indicator">
+            <span class="ear-pulse-dot" id="ear-pulse-dot"></span>
+            <span class="ear-hud-title" id="mic-indicator">EAR SENSOR • STANDBY</span>
+          </div>
+          <span class="ear-audio-tag">0ms Buffer</span>
+        </div>
+        <div class="ear-speech-body">
+          <div id="heard-transcript" class="ear-speech-text">Listening for speech...</div>
+        </div>
+      </div>
+
+      <!-- 2. Robot Real-Time Vocalizer Mouth (Coach Speech Attached to Robot Head) -->
       <div class="robot-speech-hud" id="robot-speech-hud">
         <div class="speech-hud-header">
           <div class="speech-live-indicator">
@@ -94,10 +105,11 @@
         </div>
         <div class="speech-hud-footer">
           <span class="speech-latency-tag">⚡ Barge-In: &lt;1ms Cutoff</span>
-          <span class="speech-model-tag">Rime Coda + Gemini Brain</span>
+          <span class="speech-model-tag">Gemini 3.6 Flash + Rime TTS</span>
         </div>
       </div>
 
+      <!-- Live Robot Action Badge & Indicator -->
       <div class="robot-status-overlay">
         <div id="robot-action-badge" class="robot-action-badge">
           <span class="robot-action-dot"></span>
@@ -105,8 +117,77 @@
         </div>
         <div id="robot-exercise-indicator" class="robot-exercise-tag">Idle</div>
       </div>
+
+      <!-- 3D Mascot Stage: Cybernetic Coach Mascot + Spline 3D -->
       <div class="robot-viewer-wrapper" id="robot-wrapper">
-        <spline-viewer id="spline-robot" loading-anim-type="spinner-small-dark" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
+        <div class="cyber-coach-mascot" id="cyber-coach-mascot">
+          <svg class="coach-svg" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#1E2433"/>
+                <stop offset="50%" stop-color="#0F1420"/>
+                <stop offset="100%" stop-color="#090C14"/>
+              </linearGradient>
+              <linearGradient id="chromeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#94A3B8"/>
+                <stop offset="50%" stop-color="#475569"/>
+                <stop offset="100%" stop-color="#1E293B"/>
+              </linearGradient>
+              <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.9"/>
+                <stop offset="40%" stop-color="#0891B2" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/>
+              </radialGradient>
+              <filter id="glowFilter" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            
+            <!-- Torso & Athletic Chest Plate -->
+            <path d="M68 170 L172 170 L198 240 L42 240 Z" fill="url(#bodyGrad)" stroke="#334155" stroke-width="2"/>
+            <path d="M85 175 L155 175 L165 210 L75 210 Z" fill="#0B0F19" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+            
+            <!-- Cyber Core Reactor -->
+            <circle cx="120" cy="192" r="14" fill="#031622" stroke="#06B6D4" stroke-width="1.5"/>
+            <circle cx="120" cy="192" r="9" fill="url(#coreGlow)" class="core-pulse-circle"/>
+            <circle cx="120" cy="192" r="3" fill="#E0F2FE" filter="url(#glowFilter)"/>
+            
+            <!-- Neck Hydraulic Pivot -->
+            <rect x="110" y="142" width="20" height="28" rx="4" fill="url(#chromeGrad)" stroke="#1E293B" stroke-width="1"/>
+            <line x1="110" y1="150" x2="130" y2="150" stroke="#06B6D4" stroke-width="1.5" stroke-opacity="0.6"/>
+            <line x1="110" y1="156" x2="130" y2="156" stroke="#06B6D4" stroke-width="1.5" stroke-opacity="0.6"/>
+            
+            <!-- Head & Helmet Assembly -->
+            <g class="robot-head-group">
+              <path d="M75 90 C75 48, 165 48, 165 90 C165 125, 145 145, 120 145 C95 145, 75 125, 75 90 Z" fill="url(#bodyGrad)" stroke="#475569" stroke-width="2"/>
+              <path d="M90 58 L150 58 L158 78 L82 78 Z" fill="url(#chromeGrad)" opacity="0.35"/>
+              
+              <!-- Visor & Optical Sensor -->
+              <rect x="85" y="86" width="70" height="18" rx="9" fill="#020617" stroke="#06B6D4" stroke-width="1.5"/>
+              <path d="M92 95 L148 95" stroke="#06B6D4" stroke-width="4" stroke-linecap="round" filter="url(#glowFilter)" class="visor-scan-beam"/>
+              <circle cx="120" cy="95" r="4" fill="#FFFFFF" filter="url(#glowFilter)" class="visor-pupil"/>
+              
+              <!-- Spoken Voice Speaker Grille (Animated Mouth) -->
+              <g class="mouth-speaker-grille">
+                <rect x="103" y="118" width="34" height="14" rx="7" fill="#030712" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                <line x1="109" y1="125" x2="113" y2="125" stroke="#8B5CF6" stroke-width="2.5" stroke-linecap="round" class="mouth-bar bar-1"/>
+                <line x1="116" y1="125" x2="124" y2="125" stroke="#06B6D4" stroke-width="2.5" stroke-linecap="round" class="mouth-bar bar-2"/>
+                <line x1="127" y1="125" x2="131" y2="125" stroke="#8B5CF6" stroke-width="2.5" stroke-linecap="round" class="mouth-bar bar-3"/>
+              </g>
+              
+              <!-- Ear Antennas & Microphones -->
+              <path d="M72 82 L64 75 L64 105 L72 100 Z" fill="url(#chromeGrad)" stroke="#334155" stroke-width="1"/>
+              <circle cx="68" cy="90" r="3" fill="#8B5CF6" filter="url(#glowFilter)"/>
+              <path d="M168 82 L176 75 L176 105 L168 100 Z" fill="url(#chromeGrad)" stroke="#334155" stroke-width="1"/>
+              <circle cx="172" cy="90" r="3" fill="#8B5CF6" filter="url(#glowFilter)"/>
+            </g>
+          </svg>
+        </div>
+        <spline-viewer id="spline-robot" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
       </div>
     </div>
   </section>
@@ -172,18 +253,28 @@
     <!-- Right Column: Voice Status, Pronunciation Lab & Interruption Proof -->
     <aside class="side-column">
       
-      <!-- Microphone Status & Quick Commands -->
+      <!-- Conversational AI Coach Brain (Powered by gemini-web2api) -->
       <div class="glass-panel stripe-cyan">
         <div class="section-heading">
-          <h2>🎙️ Voice Barge-In Mic</h2>
-          <span id="mic-indicator" class="state-tag">STANDBY</span>
+          <h2>🧠 Conversational AI Brain</h2>
+          <span class="state-tag active-workout">Zero Word Limits</span>
         </div>
-        
-        <div class="mic-status-card">
-          <div id="mic-visualizer" class="mic-visualizer">🎤</div>
-          <div class="mic-details">
-            <div class="mic-label">Heard Speech</div>
-            <div id="heard-transcript" class="mic-transcript">Listening for commands...</div>
+
+        <div class="ai-input-row">
+          <input type="text" id="ai-prompt-input" class="ai-input" placeholder="e.g. 'Why does my elbow hurt?', 'Is my form right?'">
+          <button id="btn-ask-ai" class="ai-ask-btn">Ask</button>
+        </div>
+
+        <!-- Conversational Natural Voice Guidance -->
+        <div class="conversational-voice-box">
+          <p class="conversational-desc">
+            Speak naturally anytime mid-rep. The AI deduces health distress, answers sports science questions, or resumes on your command.
+          </p>
+          <div class="conversational-chips">
+            <span class="voice-chip" data-speak="Why is my elbow hurting?">"Why is my elbow hurting?" (Auto-Pause)</span>
+            <span class="voice-chip" data-speak="I am okay now, let's start">"I am okay now, let's start" (Auto-Resume)</span>
+            <span class="voice-chip" data-speak="Is my push-up form correct?">"Is my push-up form correct?" (Form Check)</span>
+            <span class="voice-chip" data-speak="Hold up, need water">"Hold up, need water" (Pause)</span>
           </div>
         </div>
 
@@ -206,33 +297,6 @@
               <span class="test-pair-text">"3 sets of 8" <span class="test-pair-vs">vs</span> "three sets of eight"</span>
               <button class="btn-compare-audio" data-test="sets_3_8" data-a="3 sets of 8" data-b="three sets of eight">Compare</button>
             </div>
-          </div>
-        </div>
-
-        <!-- Conversational AI Coach Brain (Powered by gemini-web2api) -->
-        <div class="ai-coach-box">
-          <div class="ai-coach-header">
-            <span class="ai-coach-title">✨ AI Coach Brain (Ask Anything Mid-Workout)</span>
-          </div>
-          <div class="ai-input-row">
-            <input type="text" id="ai-prompt-input" class="ai-input" placeholder="e.g. 'Give me motivation', 'How do I breathe?'">
-            <button id="btn-ask-ai" class="ai-ask-btn">Ask</button>
-          </div>
-        </div>
-
-        <!-- Conversational Natural Voice Guidance (Zero Word Restrictions) -->
-        <div class="conversational-voice-box">
-          <div class="conversational-header">
-            <span class="conversational-badge">🧠 Zero Word Limitations</span>
-          </div>
-          <p class="conversational-desc">
-            Speak naturally anytime. Say anything to interrupt, pause, add time, or ask fitness advice. The AI understands your intent and talks back instantly.
-          </p>
-          <div class="conversational-chips">
-            <span class="voice-chip">"Yo Celeste, give me 15 more seconds"</span>
-            <span class="voice-chip">"How's my pushup form?"</span>
-            <span class="voice-chip">"Hold up a second, need water"</span>
-            <span class="voice-chip">"I'm ready, let's hit the next set"</span>
           </div>
         </div>
       </div>

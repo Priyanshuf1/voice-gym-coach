@@ -38,8 +38,8 @@ body {
 }
 
 /* =========================================================
-   High-Performance Rabto Athletic Matrix Background
-   (Vector isometric gym track grid + ambient lighting)
+   High-Performance Architectural Studio Canvas
+   (Engineering Micro-Dot Grid + Subtle Studio Rim Light)
    ========================================================= */
 .athletic-matrix-bg {
   position: fixed;
@@ -47,50 +47,19 @@ body {
   z-index: -1;
   pointer-events: none;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 0%, #111726 0%, #080A10 75%);
+  background-color: #07090E;
+  background-image: 
+    radial-gradient(ellipse 70% 35% at 50% -5%, rgba(99, 102, 241, 0.09) 0%, rgba(6, 182, 212, 0.03) 45%, transparent 75%),
+    radial-gradient(circle at 50% 100%, rgba(15, 23, 42, 0.7) 0%, #07090E 90%);
 }
 
 .athletic-grid-pattern {
   position: absolute;
   inset: 0;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse at 50% 35%, black 40%, transparent 85%);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 35%, black 40%, transparent 85%);
-}
-
-.ambient-glow {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-  pointer-events: none;
-  opacity: 0.6;
-}
-
-.ambient-glow.glow-violet {
-  width: 550px;
-  height: 550px;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.22) 0%, transparent 70%);
-  top: -100px;
-  left: -100px;
-}
-
-.ambient-glow.glow-cyan {
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.18) 0%, transparent 70%);
-  top: 15%;
-  right: -100px;
-}
-
-.ambient-glow.glow-emerald {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
-  bottom: -150px;
-  left: 20%;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse at 50% 35%, black 45%, transparent 90%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 35%, black 45%, transparent 90%);
 }
 
 /* Header */
@@ -335,37 +304,115 @@ spline-viewer::part(logo),
   max-width: 520px;
 }
 
-/* 3D Robot Mascot Container & Speaking Stage */
+/* 3D Robot Mascot Container & Dual Neural Sensory Interface */
 .hero-robot-container {
   position: relative;
   width: 100%;
-  height: 310px;
-  background: rgba(14, 19, 32, 0.75);
+  height: 380px;
+  background: radial-gradient(circle at 50% 45%, #FFFFFF 0%, #F1F5F9 65%, #E2E8F0 100%);
   border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.9);
 }
 
-/* Real-Time Robot Speech HUD (Pretending the Robot is Talking) */
-.robot-speech-hud {
+/* =========================================================
+   ROBOT NEURAL INTERFACE (EAR SENSOR + MOUTH VOCALIZER)
+   ========================================================= */
+
+/* 1. Robot Neural Ear Sensor (Hearing on Robot Head) */
+.robot-ear-hud {
   position: absolute;
-  bottom: 14px;
+  top: 14px;
   left: 14px;
-  right: 14px;
-  background: rgba(8, 12, 22, 0.9);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  max-width: 320px;
+  background: rgba(9, 13, 22, 0.88);
+  border: 1px solid rgba(139, 92, 246, 0.28);
   border-radius: 16px;
-  padding: 0.75rem 1rem;
-  z-index: 20;
+  padding: 0.65rem 0.95rem;
+  z-index: 25;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.robot-ear-hud.is-hearing {
+  border-color: #A78BFA;
+  box-shadow: 0 0 18px rgba(139, 92, 246, 0.4), 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+}
+
+.ear-hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ear-live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ear-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--primary-purple);
+  box-shadow: 0 0 8px var(--primary-purple);
+  animation: pulseDot 1.5s infinite;
+}
+
+.robot-ear-hud.is-hearing .ear-pulse-dot {
+  background-color: #A78BFA;
+  box-shadow: 0 0 10px #A78BFA;
+}
+
+.ear-hud-title {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #C4B5FD;
+}
+
+.ear-audio-tag {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #10B981;
+}
+
+.ear-speech-text {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #E2E8F0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+
+/* 2. Robot Real-Time Vocalizer Mouth HUD */
+.robot-speech-hud {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  max-width: 370px;
+  background: rgba(9, 13, 22, 0.92);
+  border: 1px solid rgba(6, 182, 212, 0.28);
+  border-radius: 16px;
+  padding: 0.75rem 1rem;
+  z-index: 25;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  transition: all 0.25s ease;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -373,12 +420,12 @@ spline-viewer::part(logo),
 
 .robot-speech-hud.is-talking {
   border-color: #06B6D4;
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.6);
 }
 
 .robot-speech-hud.is-interrupted {
   border-color: #F43F5E;
-  box-shadow: 0 0 20px rgba(244, 63, 94, 0.4);
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.45);
 }
 
 .speech-hud-header {
@@ -462,6 +509,31 @@ spline-viewer::part(logo),
 
 .speech-latency-tag {
   color: #10B981;
+}
+
+.pulse-dot-emerald {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  margin-right: 4px;
+}
+
+/* Suppress Built-in Spline Watermark / Logo / Link */
+spline-viewer::part(logo),
+#spline-robot::part(logo),
+spline-viewer::part(watermark),
+#spline-robot::part(watermark),
+#spline-robot a,
+#spline-robot button[title*="Spline"],
+#spline-robot [class*="watermark"],
+#spline-robot #logo {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* Robot Talking Concentric Wave Aura */
@@ -672,6 +744,61 @@ spline-viewer::part(logo),
   width: 100%;
   height: 100%;
   display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+/* Cyber Coach 3D Vector Mascot */
+.cyber-coach-mascot {
+  width: 250px;
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.coach-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.25));
+}
+
+.core-pulse-circle {
+  transform-origin: 120px 192px;
+  animation: corePulse 2s infinite ease-in-out;
+}
+
+@keyframes corePulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.visor-scan-beam {
+  animation: scanVisor 2.4s infinite ease-in-out alternate;
+}
+
+@keyframes scanVisor {
+  0% { stroke: #06B6D4; }
+  50% { stroke: #A78BFA; }
+  100% { stroke: #06B6D4; }
+}
+
+.mouth-bar {
+  transform-origin: 120px 125px;
+}
+
+.mouth-bar.bar-1 { animation: mouthSpeak 0.35s infinite alternate; }
+.mouth-bar.bar-2 { animation: mouthSpeak 0.22s infinite alternate 0.08s; }
+.mouth-bar.bar-3 { animation: mouthSpeak 0.38s infinite alternate 0.16s; }
+
+@keyframes mouthSpeak {
+  0% { transform: scaleY(0.6); }
+  100% { transform: scaleY(1.6); stroke: #38BDF8; }
 }
 
 /* =========================================================

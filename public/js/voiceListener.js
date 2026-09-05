@@ -140,31 +140,12 @@ export class VoiceListener {
    * Fast emergency / immediate command check (Runs on every interim token)
    */
   checkFastCommands(text) {
-    const clean = text.toLowerCase();
-
-    // 0. Start Workout / Let's Go / Begin / Start the Gym
-    if (
-      clean.includes('start the gym') ||
-      clean.includes('start workout') ||
-      clean.includes('start now') ||
-      clean.includes('lets go') ||
-      clean.includes("let's go") ||
-      clean.includes('begin') ||
-      clean.includes('get started') ||
-      clean.includes('hit it') ||
-      clean.trim() === 'start' ||
-      clean.startsWith('start ')
-    ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('START', text);
-      return true;
-    }
-
-    // 1. Emergency Stop / Pause
+    const clean = (text || '').toLowerCase();
+    // 0. Emergency Stop / Immediate Pause (<1ms cutoff)
     if (
       clean.includes('stop') ||
       clean.includes('pause') ||
+      clean.includes('hold up') ||
       clean.includes('hold on') ||
       clean.includes('hol up') ||
       clean.includes('wait') ||
@@ -179,7 +160,46 @@ export class VoiceListener {
       return true;
     }
 
-    // 2. Skip rest
+    // 1. Recovery / Resume: "okay now", "ready to go", "resume", "continue", "start again"
+    if (
+      clean.includes('resume') ||
+      clean.includes('continue') ||
+      clean.includes('okay now') ||
+      clean.includes('fine now') ||
+      clean.includes('good now') ||
+      clean.includes('recovered') ||
+      clean.includes('ready to go') ||
+      clean.includes('ready to roll') ||
+      clean.includes('all good') ||
+      clean.includes("i'm okay") ||
+      clean.includes("i am okay") ||
+      clean.includes('feeling better') ||
+      clean.includes('start again') ||
+      clean.includes('keep going')
+    ) {
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('RESUME', text);
+      return true;
+    }
+
+    // 2. Start Workout / Let's Go / Begin / Start the Gym / Start
+    if (
+      clean.includes('start') ||
+      clean.includes('begin') ||
+      clean.includes('lets go') ||
+      clean.includes("let's go") ||
+      clean.includes('get started') ||
+      clean.includes('hit it') ||
+      clean.includes('go for instant')
+    ) {
+      this.lastProcessedText = clean;
+      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
+      this.onCommand('START', text);
+      return true;
+    }
+
+    // 3. Skip rest
     if (
       clean.includes('skip rest') ||
       clean.includes('skipt') ||
@@ -188,25 +208,13 @@ export class VoiceListener {
       clean.includes('next set') ||
       clean.includes('next round') ||
       clean.includes('hit me') ||
-      clean.includes('cut rest')
+      clean.includes('cut rest') ||
+      clean.includes("i'm ready") ||
+      clean.includes('im ready')
     ) {
       this.lastProcessedText = clean;
       setTimeout(() => { this.lastProcessedText = ''; }, 1200);
       this.onCommand('SKIP_REST', text);
-      return true;
-    }
-
-    // 3. Resume
-    if (
-      clean.includes('resume') ||
-      clean.includes('continue') ||
-      clean.includes('back to work') ||
-      clean.includes('start again') ||
-      clean.includes('keep going')
-    ) {
-      this.lastProcessedText = clean;
-      setTimeout(() => { this.lastProcessedText = ''; }, 1200);
-      this.onCommand('RESUME', text);
       return true;
     }
 

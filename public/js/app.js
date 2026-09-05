@@ -77,7 +77,9 @@ const rimeClient = new RimeClient({
   modelId: 'coda'
 });
 
-// Elements for Robot Speech Transmission HUD
+// Elements for Robot Speech & Hearing HUD
+const robotEarHud = document.getElementById('robot-ear-hud');
+const earPulseDot = document.getElementById('ear-pulse-dot');
 const robotSpeechHud = document.getElementById('robot-speech-hud');
 const speechHudTitle = document.getElementById('speech-hud-title');
 const speechEqBars = document.getElementById('speech-eq-bars');
@@ -298,9 +300,8 @@ function updateHUDState(state, ctx) {
 // 4. Initialize Voice Listener with Barge-In Logic
 const voiceListener = new VoiceListener({
   onSpeechStart: () => {
-    micVisualizer.classList.add('speaking');
-    micIndicator.textContent = 'HEARING SPEECH';
-    micIndicator.className = 'state-tag active-workout';
+    if (robotEarHud) robotEarHud.classList.add('is-hearing');
+    if (micIndicator) micIndicator.textContent = 'EAR • HEARING SPEECH';
 
     // If coach is speaking, user has started interrupting!
     if (audioController.isPlaying) {
@@ -312,29 +313,29 @@ const voiceListener = new VoiceListener({
     const btnMicText = document.getElementById('btn-mic-text');
 
     if (status === 'LISTENING') {
-      micVisualizer.classList.remove('speaking');
-      micVisualizer.classList.add('listening');
-      micIndicator.textContent = 'LISTENING';
-      micIndicator.className = 'state-tag active-workout';
+      if (robotEarHud) robotEarHud.classList.remove('is-hearing');
+      if (micIndicator) micIndicator.textContent = 'EAR SENSOR • LISTENING';
       if (btnMicToggle) btnMicToggle.classList.add('active');
       if (btnMicText) btnMicText.textContent = '🎙️ Mic Active (Listening)';
     } else if (status === 'SPEECH_DETECTED') {
+      if (robotEarHud) robotEarHud.classList.add('is-hearing');
+      if (micIndicator) micIndicator.textContent = 'EAR • HEARING...';
       if (btnMicText) btnMicText.textContent = '🎙️ Hearing You...';
     } else if (status === 'OFF') {
-      micVisualizer.className = 'mic-visualizer';
-      micIndicator.textContent = 'STANDBY';
-      micIndicator.className = 'state-tag';
+      if (robotEarHud) robotEarHud.classList.remove('is-hearing');
+      if (micIndicator) micIndicator.textContent = 'EAR • STANDBY';
       if (btnMicToggle) btnMicToggle.classList.remove('active');
       if (btnMicText) btnMicText.textContent = '🎙️ Start Hands-Free Mic';
     } else if (status === 'MIC_BLOCKED') {
-      micIndicator.textContent = 'BLOCKED';
-      micIndicator.className = 'state-tag interrupted';
+      if (robotEarHud) robotEarHud.classList.remove('is-hearing');
+      if (micIndicator) micIndicator.textContent = 'MIC BLOCKED';
       if (btnMicToggle) btnMicToggle.classList.remove('active');
       if (btnMicText) btnMicText.textContent = '❌ Mic Blocked (Click)';
     }
   },
   onInterim: (text) => {
-    heardTranscriptEl.textContent = `"${text}"`;
+    if (heardTranscriptEl) heardTranscriptEl.textContent = `"${text}"`;
+    if (robotEarHud) robotEarHud.classList.add('is-hearing');
   },
   onCommand: (command, rawText) => {
     handleSpokenCommand(command, rawText);
@@ -364,11 +365,57 @@ function triggerBargeIn(reason) {
 // Spoken Command Router with Dynamic AI Semantic Brain
 async function handleSpokenCommand(fallbackCommand, rawText) {
   logMessage(`🎙️ [HEARD] "${rawText}"`, 'user');
+  if (heardTranscriptEl) heardTranscriptEl.textContent = `"${rawText}"`;
 
   // 1. Instant hardware audio cutoff (<1ms)
   triggerBargeIn(`Spoken input: "${rawText}"`);
 
-  // 2. Query AI Semantic Intent Engine (Handles slang, mispronunciations, and custom fitness questions)
+  // 2. Instant Zero-Latency Execution for Hard Commands
+  if (fallbackCommand === 'START') {
+    logMessage(`🎯 Instant Executing: START WORKOUT`, 'success');
+    if (stateMachine.state === STATES.IDLE || stateMachine.state === STATES.COMPLETED) {
+      stateMachine.startWorkout();
+    } else if (stateMachine.state === STATES.PAUSED) {
+      stateMachine.resume();
+    } else if (stateMachine.state === STATES.REST_TIMER) {
+      stateMachine.skipRest();
+    }
+    return;
+  }
+
+  if (fallbackCommand === 'RESUME') {
+    logMessage(`🎯 Instant Executing: RESUME WORKOUT`, 'success');
+    if (stateMachine.state === STATES.PAUSED) {
+      stateMachine.resume();
+    } else if (stateMachine.state === STATES.IDLE) {
+      stateMachine.startWorkout();
+    } else if (stateMachine.state === STATES.REST_TIMER) {
+      stateMachine.skipRest();
+    }
+    return;
+  }
+
+  if (fallbackCommand === 'PAUSE') {
+    logMessage(`🎯 Instant Executing: PAUSE WORKOUT`, 'info');
+    stateMachine.pause();
+    return;
+  }
+
+  if (fallbackCommand === 'SKIP_REST') {
+    logMessage(`🎯 Instant Executing: SKIP REST`, 'success');
+    stateMachine.skipRest();
+    return;
+  }
+
+  if (fallbackCommand === 'ADD_REST') {
+    logMessage(`🎯 Instant Executing: ADD REST`, 'success');
+    if (stateMachine.state === STATES.REST_TIMER) {
+      stateMachine.addRestSeconds(10);
+    }
+    return;
+  }
+
+  // 3. Query AI Semantic Intent Engine for Conversational Queries, Pain, or Health Inquiries
   const ctx = stateMachine.getContext();
   try {
     const res = await fetch('/api/intent-ai', {
@@ -390,30 +437,31 @@ async function handleSpokenCommand(fallbackCommand, rawText) {
 
     switch (action) {
       case 'START':
-        logMessage(`🎯 Executing: START WORKOUT`, 'success');
+        logMessage(`🎯 AI Executing: START WORKOUT`, 'success');
         if (stateMachine.state === STATES.IDLE || stateMachine.state === STATES.COMPLETED) {
           stateMachine.startWorkout();
         } else if (stateMachine.state === STATES.PAUSED) {
           stateMachine.resume();
         } else if (stateMachine.state === STATES.REST_TIMER) {
           stateMachine.skipRest();
-        } else {
-          audioController.speak(`We are already locked into Set ${ctx.set}! Keep driving!`, true);
         }
         break;
 
       case 'SKIP_REST':
-        logMessage(`🎯 Executing: SKIP REST`, 'success');
+        logMessage(`🎯 AI Executing: SKIP REST`, 'success');
         stateMachine.skipRest();
         break;
 
       case 'PAUSE':
-        logMessage(`🎯 Executing: PAUSE WORKOUT`, 'info');
+        logMessage(`🎯 AI Executing: PAUSE WORKOUT`, 'info');
         stateMachine.pause();
+        if (data.spokenFeedback) {
+          audioController.speak(data.spokenFeedback, true);
+        }
         break;
 
       case 'RESUME':
-        logMessage(`🎯 Executing: RESUME WORKOUT`, 'success');
+        logMessage(`🎯 AI Executing: RESUME WORKOUT`, 'success');
         if (stateMachine.state === STATES.PAUSED) {
           stateMachine.resume();
         } else if (stateMachine.state === STATES.IDLE) {
@@ -425,7 +473,7 @@ async function handleSpokenCommand(fallbackCommand, rawText) {
 
       case 'ADD_REST':
         const secs = data.parameter || 10;
-        logMessage(`🎯 Executing: ADD ${secs}s REST`, 'success');
+        logMessage(`🎯 AI Executing: ADD ${secs}s REST`, 'success');
         if (stateMachine.state === STATES.REST_TIMER) {
           stateMachine.addRestSeconds(secs);
         } else {
@@ -434,7 +482,7 @@ async function handleSpokenCommand(fallbackCommand, rawText) {
         break;
 
       case 'NEXT_EXERCISE':
-        logMessage(`🎯 Executing: NEXT EXERCISE`, 'success');
+        logMessage(`🎯 AI Executing: NEXT EXERCISE`, 'success');
         stateMachine.nextExercise();
         break;
 
@@ -450,7 +498,6 @@ async function handleSpokenCommand(fallbackCommand, rawText) {
     }
   } catch (err) {
     console.error('Intent parsing error:', err);
-    // Graceful fallback to basic command if network fails
     if (fallbackCommand === 'START') {
       if (stateMachine.state === STATES.IDLE) stateMachine.startWorkout();
       else if (stateMachine.state === STATES.PAUSED) stateMachine.resume();
@@ -694,6 +741,29 @@ async function initApp() {
   initWaveformVisualizer();
   initCyberRoninAnimations();
   initMicInteractions();
+
+  // Initialize Clickable Conversational Voice Chips
+  const voiceChips = document.querySelectorAll('.voice-chip');
+  voiceChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const phrase = chip.getAttribute('data-speak') || chip.textContent.replace(/[()"]/g, '').trim();
+      logMessage(`👉 [VOICE CHIP] "${phrase}"`, 'user');
+      handleSpokenCommand('', phrase);
+    });
+  });
+
+  // Ensure Spline 3D Robot model is actively loaded without hanging
+  const spline = document.getElementById('spline-robot');
+  if (spline) {
+    const checkAndLoadSpline = () => {
+      if (typeof spline.load === 'function' && !spline.isLoaded) {
+        spline.load(spline.getAttribute('url')).catch(() => {});
+      }
+    };
+    checkAndLoadSpline();
+    setTimeout(checkAndLoadSpline, 600);
+    setTimeout(checkAndLoadSpline, 1500);
+  }
 }
 
 // =========================================================
