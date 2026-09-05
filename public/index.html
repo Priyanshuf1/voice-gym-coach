@@ -54,130 +54,47 @@
     </div>
   </header>
 
-  <!-- CYBER RONIN HERO SECTION (User Exact Specification with Cursor Spotlight) -->
-  <main class="hero cyber-ronin-hero">
+  <!-- Fixed Cyber Ronin Background with Interactive Cursor Spotlight -->
+  <div class="fixed-bg-base"
+       style="background-image: url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260831_115955_2a9adb39-5e9b-4ced-96e2-6900eabe3de9.png&w=1920&q=85');">
+  </div>
+  <div class="fixed-bg-reveal" id="reveal-img"
+       style="background-image: url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260831_123709_183f0065-efb2-4bb2-a849-13aaa5af2f3f.png&w=1920&q=85');">
+  </div>
 
-    <!-- 1. BASE Hero Image Layer (Day/Normal Scene) -->
-    <div class="hero-base-img hero-image-animate"
-         style="background-image: url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260831_115955_2a9adb39-5e9b-4ced-96e2-6900eabe3de9.png&w=1920&q=85');">
-    </div>
-
-    <!-- 2. REVEAL Hero Image Layer (Spotlight Masked Scene) -->
-    <div class="hero-reveal-img" id="reveal-img"
-         style="background-image: url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260831_123709_183f0065-efb2-4bb2-a849-13aaa5af2f3f.png&w=1920&q=85');">
-    </div>
-
-    <!-- 3. Page Counter Floating Indicator -->
-    <div class="hero-page fade-up-reveal" data-delay="0.75">1/26</div>
-
-    <!-- 4. Hero UI Interactive Overlay -->
-    <div class="hero-ui">
-
-      <!-- Left Column: Copy, Action Icons & Product Card -->
-      <div class="hero-left">
-
-        <div class="hero-copy">
-          <h1 class="words-pull-up">
-            <span>RONIN-X //</span>
-            <span>SHADOW</span>
-            <span>NIGHTFALL</span>
-          </h1>
-
-          <p class="fade-up-reveal" data-delay="0.5">
-            Cultivated with high-res optics and a zero-gravity frame for those who don't just watch the future—they wield it. Shift your reality.
-          </p>
-
-          <div class="icon-row fade-up-reveal" data-delay="0.65">
-            <!-- Icon 1: Main Core -->
-            <button class="icon-btn" aria-label="Main core">
-              <svg viewBox="0 0 16 16">
-                <path d="M8 1.4L13.8 4.7V11.3L8 14.6L2.2 11.3V4.7L8 1.4Z"></path>
-                <circle cx="8" cy="8" r="1.35" fill="currentColor"></circle>
-              </svg>
-            </button>
-
-            <!-- Icon 2: Vision -->
-            <button class="icon-btn" aria-label="Vision">
-              <svg viewBox="0 0 16 16">
-                <path d="M2 5.2V2h3.2 M14 5.2V2h-3.2 M2 10.8V14h3.2 M14 10.8V14h-3.2" stroke-linecap="round"></path>
-                <rect x="5.2" y="5.2" width="5.6" height="5.6"></rect>
-              </svg>
-            </button>
-
-            <!-- Icon 3: Force -->
-            <button class="icon-btn" aria-label="Force">
-              <svg viewBox="0 0 16 16">
-                <path d="M9.2 1.6L4 9.1h3.5L6.8 14.4 12 6.9H8.5L9.2 1.6Z" stroke-linejoin="round"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Product Card Article -->
-        <article class="product-card">
-          <div class="product-thumb" aria-hidden="true"
-               style="background-image: url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260831_121937_3f02b5a0-5b86-43d9-b30e-03c5e46632e7.png&w=1920&q=85');">
-          </div>
-          <div class="product-body">
-            <h2 class="words-pull-up">CR-01: CYBER FRAME</h2>
-            <p class="fade-up-reveal" data-delay="1.05">
-              Precision-grade optics and a light frame for comfort and clarity.
-            </p>
-          </div>
-          <a href="#workout-hud" class="cart-btn fade-up-reveal" data-delay="1.15">Enter Gym HUD ⚡</a>
-        </article>
-
+  <!-- Interactive 3D Robot Hero Stage (Workout-Matching Actions) -->
+  <section class="hero-robot-stage">
+    <div class="hero-stage-content">
+      <div class="hero-stage-pill">
+        <span>⚡</span> Hands-Free Conversational Voice Coach
       </div>
-
-      <!-- Right Column: Operative Specs -->
-      <aside class="specs">
-        <h3 class="words-pull-up">Operative Specs</h3>
-
-        <div class="spec-row fade-up-reveal" data-delay="1.2">
-          <span class="spec-label">Vision</span>
-          <span class="spec-value">Dual 8K Pulse-OLED</span>
-        </div>
-
-        <div class="spec-row fade-up-reveal" data-delay="1.3">
-          <span class="spec-label">Nerve</span>
-          <span class="spec-value">R1 - Ronin Engines</span>
-        </div>
-
-        <div class="spec-row fade-up-reveal" data-delay="1.4">
-          <span class="spec-label">Reflex</span>
-          <span class="spec-value">144Hz Low-Lag Ops</span>
-        </div>
-
-        <div class="spec-row fade-up-reveal" data-delay="1.5">
-          <span class="spec-label">Armor</span>
-          <span class="spec-value">Lightweight Shadow Shell</span>
-        </div>
-      </aside>
-
+      <h1 class="hero-stage-title">Speak Naturally. The AI Coach Listens <span>Mid-Rep.</span></h1>
+      <p class="hero-stage-sub">
+        No button taps. No 4-word limitations. Speak freely to ask questions, extend rest, or interrupt mid-sentence with &lt;1ms hardware cutoff.
+      </p>
     </div>
 
-  </main>
+    <!-- 3D Interactive Mascot (Spline Robot with Zero Watermark) -->
+    <div class="hero-robot-container" id="robot-container">
+      <div id="robot-aura" class="robot-aura"></div>
+      <div class="robot-status-overlay">
+        <div id="robot-action-badge" class="robot-action-badge">
+          <span class="robot-action-dot"></span>
+          <span id="robot-action-text">Coach Standing By</span>
+        </div>
+        <div id="robot-exercise-indicator" class="robot-exercise-tag">Idle</div>
+      </div>
+      <div class="robot-viewer-wrapper" id="robot-wrapper">
+        <spline-viewer id="spline-robot" loading-anim-type="spinner-small-dark" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
+      </div>
+    </div>
+  </section>
 
   <!-- Main Grid Dashboard -->
-  <div id="workout-hud" class="main-content">
+  <main id="workout-hud" class="main-content">
     
     <!-- Left Column: Workout HUD & Routines -->
     <section class="glass-panel hud-section stripe-purple">
-
-      <!-- Interactive 3D Robot Mascot (Executing Workout Actions) -->
-      <div class="hud-robot-container" id="robot-container">
-        <div id="robot-aura" class="robot-aura"></div>
-        <div class="robot-status-overlay">
-          <div id="robot-action-badge" class="robot-action-badge">
-            <span class="robot-action-dot"></span>
-            <span id="robot-action-text">Coach Standing By</span>
-          </div>
-          <div id="robot-exercise-indicator" class="robot-exercise-tag">Idle</div>
-        </div>
-        <div class="robot-viewer-wrapper" id="robot-wrapper">
-          <spline-viewer id="spline-robot" loading-anim-type="spinner-small-dark" url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
-        </div>
-      </div>
       
       <!-- Routine Selector Pills (Rabto Bento style) -->
       <div class="routine-selector">
@@ -291,13 +208,19 @@
           </div>
         </div>
 
-        <div style="margin-top: 0.6rem;">
-          <span class="mic-label">Instant Voice Commands (Say Anytime):</span>
-          <div class="commands-grid">
-            <div class="command-chip"><strong>"Skip rest"</strong> → Next set</div>
-            <div class="command-chip"><strong>"Stop" / "Pause"</strong> → Halt coach</div>
-            <div class="command-chip"><strong>"Next exercise"</strong> → Move on</div>
-            <div class="command-chip"><strong>"Add 10 seconds"</strong> → Rest +10s</div>
+        <!-- Conversational Natural Voice Guidance (Zero Word Restrictions) -->
+        <div class="conversational-voice-box">
+          <div class="conversational-header">
+            <span class="conversational-badge">🧠 Zero Word Limitations</span>
+          </div>
+          <p class="conversational-desc">
+            Speak naturally anytime. Say anything to interrupt, pause, add time, or ask fitness advice. The AI understands your intent and talks back instantly.
+          </p>
+          <div class="conversational-chips">
+            <span class="voice-chip">"Yo Celeste, give me 15 more seconds"</span>
+            <span class="voice-chip">"How's my pushup form?"</span>
+            <span class="voice-chip">"Hold up a second, need water"</span>
+            <span class="voice-chip">"I'm ready, let's hit the next set"</span>
           </div>
         </div>
       </div>
