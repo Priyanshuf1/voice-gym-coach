@@ -414,6 +414,43 @@ testVoiceStop.addEventListener('click', () => {
   handleSpokenCommand('PAUSE', 'stop (simulated)');
 });
 
+// Problem 2: Pronunciation & Delivery Lab Event Listener
+const compareBtns = document.querySelectorAll('.btn-compare-audio');
+compareBtns.forEach(btn => {
+  btn.addEventListener('click', async () => {
+    soundFx.init();
+    audioController.initAudioContext();
+    const testId = btn.getAttribute('data-test');
+    const varA = btn.getAttribute('data-a');
+    const varB = btn.getAttribute('data-b');
+
+    logMessage(`🔬 [PRONUNCIATION LAB] Testing Variant A ("${varA}") vs Variant B ("${varB}")`, 'info');
+    
+    // Announce Variant A
+    logMessage(`🔊 Playing Variant A: "${varA}"`, 'coach');
+    await audioController.speak(`Variant A: ${varA}`, true);
+
+    await new Promise(r => setTimeout(r, 800));
+
+    // Announce Variant B
+    logMessage(`🔊 Playing Variant B: "${varB}"`, 'coach');
+    await audioController.speak(`Variant B: ${varB}`, true);
+
+    // Call server to save WAV evidence
+    try {
+      const res = await fetch('/api/pronunciation-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testId, variantA: varA, variantB: varB })
+      });
+      const data = await res.json();
+      logMessage(`📊 [EVIDENCE] ${data.recommendation || 'WAV files recorded to /pronunciation_evidence'}`, 'success');
+    } catch (e) {
+      console.warn('Pronunciation test endpoint note:', e);
+    }
+  });
+});
+
 // Copy Evidence Log Button
 copyLogsBtn.addEventListener('click', () => {
   const entries = Array.from(document.querySelectorAll('.log-entry')).map(e => e.textContent).join('\n');

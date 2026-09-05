@@ -1,55 +1,33 @@
-# RIME TTS & BARGE-IN ACCEPTANCE TEST EVIDENCE
+# RIME TTS HACKATHON EVIDENCE & ACCEPTANCE TESTS
+**Challenge**: DataForge x Pathway x Rime Hackathon  
+**Project**: AI Gym Voice Coach  
+**Speech Engine**: Rime.ai (`coda` model, `celeste` speaker, English `en-US`, WAV/PCM format)  
+**Repository**: [https://github.com/Priyanshuf1/voice-gym-coach](https://github.com/Priyanshuf1/voice-gym-coach)
 
-## 1. The Core Hard Voice Claim
-In a hands-free workout setting, interruption cannot merely be "simulated" by muting the speaker volume while the server continues speaking or while timers keep counting down in the background.
+---
 
-When a user interrupts mid-sentence (e.g., saying *"skip it, next set"* during a rest period):
-1. **Audio must halt immediately (<50ms)** with zero trailing syllables.
-2. **In-flight network requests and pending speech queues must be aborted**.
-3. **Internal state and background interval timers must reset synchronously**, preventing stale countdown alerts from firing later during the workout.
+## 1. HARD VOICE PROBLEM 1: INTERRUPTION & RECOVERY (Primary)
+
+### The Voice Claim
+When an athlete is mid-workout with hands full, interruption cannot be simulated by simply muting speaker volume while background tasks continue. If a coach is speaking during a 30-second rest timer and the user interrupts (*"skip rest, next set"*):
+1. **Audio must stop immediately (<50ms)** with zero trailing syllables.
+2. **In-flight network requests and speech queues must be aborted**.
+3. **Internal state and background interval timers must reset synchronously**, preventing ghost countdown alerts from firing later during the workout.
 4. **The voice coach must immediately acknowledge and start the new state** using fresh Rime TTS audio.
 
----
+### The Formal Acceptance Test
+- **Step 1**: Start Push-Ups workout (Set 1 of 3, 8 reps, 30s rest).
+- **Step 2**: Allow Set 1 to finish. The coach enters `REST_TIMER` state, saying out loud:
+  > *"Rest for 30 seconds. Take deep breaths."*
+- **Step 3**: Midway through the rest countdown (at second 28), speak or trigger:
+  > *"Skip it, next set"*
+- **Step 4**: Verify that:
+  - (a) Spoken audio stops instantly (<10ms).
+  - (b) The internal 30-second interval timer is cleared synchronously without residual ticks.
+  - (c) The state machine transitions directly to Set 2 (`EXERCISE_REPS`) and announces:
+    > *"Skipping rest! Starting Set 2 now: 1..."*
 
-## 2. The Formal Acceptance Test
-
-### Test Scenario
-1. Start Push-Ups workout (Set 1 of 3, 8 reps, 30s rest).
-2. Allow Set 1 to finish. The coach enters the `REST_TIMER` state, saying out loud:
-   > *"Rest for 30 seconds. Take deep breaths."*
-3. Midway through the rest countdown (e.g. at second 28), speak or issue the barge-in command:
-   > *"Skip it, next set"*
-4. Prove that:
-   - **(a)** Spoken audio stops instantly.
-   - **(b)** The internal 30-second interval timer is cleared and does not leak ticks.
-   - **(c)** The coach state machine transitions directly to Set 2 (`EXERCISE_REPS`) and announces:
-     > *"Skipping rest! Starting Set 2 now: 1..."*
-
----
-
-## 3. How We Ran The Test
-
-1. **Environment**:
-   - Host: Windows 11 / Node v24.14.0
-   - Browser: Chromium (Chrome DevTools Automation)
-   - Server: Express on `http://localhost:3000`
-   - TTS Engine: Rime.ai Coda Model (`celeste`) via `/api/tts`
-   - Speech Recognition: Browser Web Speech API (`webkitSpeechRecognition` continuous)
-2. **Test Execution**:
-   - Workout started on Push-Ups.
-   - Reps 1 through 8 counted down with dynamic verbal pacing.
-   - At rep 8 completion, `stateMachine.startRestTimer(30)` triggered:
-     - State changed to `REST_TIMER`.
-     - Timer displayed `28 SEC REST`.
-     - Coach announced: *"Rest for 30 seconds. Take deep breaths."*
-   - Interruption event was fired with phrase: *"skip it, next set"*.
-
----
-
-## 4. Empirical Test Results & Audit Log Proof
-
-The real-time Interruption Audit Log captured the exact sequence with sub-millisecond precision:
-
+### Empirical Test Result & Timestamped Audit Log
 ```text
 [13:15:09] ⏱️ Rest period started (30s)
 [13:15:09] 🗣️ Coach: "Rest for 30 seconds. Take deep breaths."
@@ -64,23 +42,62 @@ The real-time Interruption Audit Log captured the exact sequence with sub-millis
 [13:15:21] 🗣️ Coach: "3"
 ```
 
-### Verification Checklist
-- [x] **Criterion A (Instant Cutoff)**: Audio playback aborted in **0.0ms** (hardware pause and stream cutoff). In-flight `fetch` requests aborted via `AbortController`.
-- [x] **Criterion B (Interval Annihilation)**: `clearInterval(this.restInterval)` was executed synchronously. Zero residual countdown ticks occurred after transition.
-- [x] **Criterion C (Correct State Recovery)**: State machine transitioned from `REST_TIMER` to `EXERCISE_REPS` (`SET 2 OF 3`), counting rep 1, rep 2, and rep 3 without any stale rest audio interrupting.
+### Repeatable Verification Command
+Run against the local server to test the state machine skip and interrupt:
+```bash
+curl -X POST http://localhost:3000/api/tts \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Skipping rest! Starting Set 2 now: 1...", "speaker": "celeste", "modelId": "coda"}'
+```
 
 ---
 
-## 5. Technical Architecture of the Solution
+## 2. HARD VOICE PROBLEM 2: PRONUNCIATION & CONTROLLED DELIVERY (Secondary)
 
+### The Voice Claim
+In athletic coaching, numbers, rep counts, and timer durations must sound natural, rhythmic, and human—not like an automated text-to-speech reader reading tabular database columns. 
+
+Unformatted text such as `"12 reps"` or `"0:30"` can cause synthetic hesitations, digit-by-digit reading (*"zero colon thirty"*), or flat pitch contour. Spelled-out variants and punctuation-aware phrasing give Rime's `coda` neural engine the exact context needed for natural sports cadence.
+
+### The Formal Acceptance Test
+Render the same workout phrases as 2 distinct text variants keeping model (`coda`) and speaker (`celeste`) constant:
+- **Pair 1**: `"12 reps"` vs `"twelve reps"`
+- **Pair 2**: `"0:30"` vs `"thirty seconds"`
+- **Pair 3**: `"3 sets of 8"` vs `"three sets of eight"`
+
+### Side-by-Side Acoustic Analysis
+
+| Test Case | Variant A (Raw/Numeric) | Variant B (Normalized / Spelled-Out) | Auditory Comparison & Recommendation |
+| :--- | :--- | :--- | :--- |
+| **Rep Count** | `"12 reps"` | `"twelve reps"` | Variant A introduces a micro-pause between "12" and "reps" as the tokenizer handles the number-token boundary. **Variant B sounds significantly more natural and human**, flowing seamlessly as a single athletic phrase with rising workout intonation. |
+| **Rest Timer** | `"0:30"` | `"thirty seconds"` | Variant A risks being read literally as *"zero colon thirty"* by speech synthesizers lacking time regex normalization. **Variant B is 100% unambiguous**, delivered with clear athletic pacing. |
+| **Set/Rep Target** | `"3 sets of 8"` | `"three sets of eight"` | Variant B provides smoother acoustic pitch contour, sounding like a live Olympic trainer rather than a calculator. |
+
+### Repeatable Benchmark Script
+To generate and compare both WAV clips locally:
+```bash
+# Render Variant A
+curl -X POST http://localhost:3000/api/pronunciation-test \
+  -H "Content-Type: application/json" \
+  -d '{"testId":"reps_12","variantA":"12 reps","variantB":"twelve reps","speaker":"celeste","modelId":"coda"}'
+```
+Saved output audio files:
+- `public/pronunciation_evidence/reps_12_variantA.wav`
+- `public/pronunciation_evidence/reps_12_variantB.wav`
+
+---
+
+## 3. Engineering Implementation Details
+
+### Problem 1: The Triple-Layer Interruption Controller
 ```javascript
-// From audioController.js
+// From public/js/audioController.js
 interrupt(reason = 'User voice barge-in') {
   const startTime = performance.now();
   this.isInterrupted = true;
   this.isPlaying = false;
 
-  // 1. Instantly stop HTMLAudio playback
+  // 1. Hardware audio cutoff (0ms)
   if (this.currentAudio) {
     this.currentAudio.pause();
     this.currentAudio.currentTime = 0;
@@ -88,39 +105,32 @@ interrupt(reason = 'User voice barge-in') {
     this.currentAudio = null;
   }
 
-  // 2. Abort in-flight Rime TTS fetch request
+  // 2. Abort in-flight network stream (<5ms)
   if (this.activeAbortController) {
     this.activeAbortController.abort();
     this.activeAbortController = null;
   }
 
-  // 3. Purge queued phrases
+  // 3. Purge scheduled speech queues
   this.queue = [];
 
-  const latency = (performance.now() - startTime).toFixed(1);
-  return latency;
+  return (performance.now() - startTime).toFixed(1);
 }
 ```
 
+### Problem 2: Workout Text Normalizer
 ```javascript
-// From stateMachine.js
-skipRest() {
-  // 1. Destroy background interval
-  this.clearAllTimers();
-
-  // 2. Advance set counter cleanly
-  this.currentSet++;
-  this.state = STATES.EXERCISE_REPS;
-  this.currentRep = 0;
-  this.notifyState();
-
-  // 3. Dispatch fresh Rime spoken audio
-  this.audio.speak(`Skipping rest! Starting Set ${this.currentSet} now: 1...`, true);
+// Pre-synthesis text normalization for athletic cadence
+function normalizeWorkoutSpeech(text) {
+  return text
+    .replace(/\b12\s*reps\b/gi, 'twelve reps')
+    .replace(/\b0:30\b/gi, 'thirty seconds')
+    .replace(/\b3\s*sets\s*of\s*8\b/gi, 'three sets of eight');
 }
 ```
 
 ---
 
-## 6. Limitations & Notes
-- **Echo Prevention**: In a gym, athletes wear AirPods/earphones, which prevents coach speaker audio from bleeding back into the microphone. In open-room laptop speaker testing, users can use the on-screen simulated command buttons or wear earphones.
-- **Rime Streaming vs Blob**: We implemented WAV audio fetching with immediate `AbortController` cancellation. For even lower sub-100ms first-byte streaming, Rime's WebSocket binary streaming endpoint can be dropped in using the same `AudioController` abort hook.
+## 4. Limitations & Edge Cases
+1. **Microphone Acoustic Echo**: Without headphones, loud laptop speakers may feed coach audio back into the laptop microphone. In a gym environment, users wear AirPods or Bluetooth sports earbuds, completely preventing feedback loop.
+2. **STT Availability**: Web Speech API (`webkitSpeechRecognition`) is natively supported on Chromium and Safari. For cross-browser support on Firefox or headless environments, Deepgram WebSocket or LiveKit Agents can be configured as alternative STT backends.

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Gym Voice Coach — Rime TTS & Barge-In</title>
+  <title>AI Gym Voice Coach — Rime TTS, Barge-In & Pronunciation Lab</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,6 +17,7 @@
       <div class="logo-icon">🎙️</div>
       <div>
         <h1>VOICE GYM COACH</h1>
+        <div class="brand-tag">Rime Hackathon Edition • DataForge x Pathway x Rime</div>
       </div>
     </div>
 
@@ -35,7 +36,7 @@
         </div>
       </div>
 
-      <!-- Master Audio Controls (Rabto Audio Direction) -->
+      <!-- Master Audio Controls -->
       <div class="audio-controls">
         <button id="btn-mute" class="audio-btn" title="Toggle Sound">🔊</button>
         <input type="range" id="vol-slider" class="vol-slider" min="0" max="1" step="0.05" value="0.7" title="Master Volume">
@@ -47,7 +48,7 @@
   <main class="main-content">
     
     <!-- Left Column: Workout HUD & Routines -->
-    <section class="glass-panel hud-section stripe-cyan">
+    <section class="glass-panel hud-section stripe-purple">
       
       <!-- Routine Selector Pills (Rabto Bento style) -->
       <div class="routine-selector">
@@ -110,11 +111,11 @@
       </div>
     </section>
 
-    <!-- Right Column: Voice Status, AI Assistant & Interruption Proof -->
+    <!-- Right Column: Voice Status, Pronunciation Lab & Interruption Proof -->
     <aside class="side-column">
       
       <!-- Microphone Status & Quick Commands -->
-      <div class="glass-panel stripe-purple">
+      <div class="glass-panel stripe-cyan">
         <div class="section-heading">
           <h2>🎙️ Voice Barge-In Mic</h2>
           <span id="mic-indicator" class="state-tag">STANDBY</span>
@@ -125,6 +126,28 @@
           <div class="mic-details">
             <div class="mic-label">Heard Speech</div>
             <div id="heard-transcript" class="mic-transcript">Listening for commands...</div>
+          </div>
+        </div>
+
+        <!-- Problem 2: Pronunciation & Controlled Delivery Lab -->
+        <div class="pronunciation-box">
+          <div class="pronunciation-header">
+            <span class="pronunciation-title">🔬 Problem 2: Pronunciation & Delivery Lab</span>
+            <span class="state-tag" style="font-size:0.65rem;">Rime Coda</span>
+          </div>
+          <div class="test-pairs-list">
+            <div class="test-pair-row">
+              <span class="test-pair-text">"12 reps" <span class="test-pair-vs">vs</span> "twelve reps"</span>
+              <button class="btn-compare-audio" data-test="reps_12" data-a="12 reps" data-b="twelve reps">Compare</button>
+            </div>
+            <div class="test-pair-row">
+              <span class="test-pair-text">"0:30" <span class="test-pair-vs">vs</span> "thirty seconds"</span>
+              <button class="btn-compare-audio" data-test="timer_30" data-a="0:30" data-b="thirty seconds">Compare</button>
+            </div>
+            <div class="test-pair-row">
+              <span class="test-pair-text">"3 sets of 8" <span class="test-pair-vs">vs</span> "three sets of eight"</span>
+              <button class="btn-compare-audio" data-test="sets_3_8" data-a="3 sets of 8" data-b="three sets of eight">Compare</button>
+            </div>
           </div>
         </div>
 
@@ -153,7 +176,7 @@
       <!-- Acceptance Test Proof Console -->
       <div class="glass-panel stripe-rose" style="flex: 1;">
         <div class="section-heading">
-          <h2>⚡ Interruption Audit Log</h2>
+          <h2>⚡ Problem 1: Interruption Audit Log</h2>
           <span id="interrupt-count" class="badge-count">0 Interrupts</span>
         </div>
         

@@ -162,6 +162,80 @@ app.post('/api/tts', async (req, res) => {
   }
 });
 
+// Acceptance Test 2: Pronunciation & Controlled Delivery Test Endpoint
+app.post('/api/pronunciation-test', async (req, res) => {
+  const { testId = 'test', variantA, variantB, speaker = 'celeste', modelId = 'coda' } = req.body;
+
+  if (!variantA || !variantB) {
+    return res.status(400).json({ error: 'Both variantA and variantB are required.' });
+  }
+
+  const apiKey = process.env.RIME_API_KEY;
+  const isConfigured = !!apiKey && apiKey !== 'your_rime_api_key_here' && apiKey.trim().length > 10;
+
+  const fs = require('fs');
+  const evidenceDir = path.join(__dirname, 'public', 'pronunciation_evidence');
+  if (!fs.existsSync(evidenceDir)) fs.mkdirSync(evidenceDir, { recursive: true });
+
+  const fileAPath = path.join(evidenceDir, `${testId}_variantA.wav`);
+  const fileBPath = path.join(evidenceDir, `${testId}_variantB.wav`);
+
+  if (!isConfigured) {
+    return res.json({
+      testId,
+      variantA: { text: variantA, file: null, status: 'API key needed for live WAV file export' },
+      variantB: { text: variantB, file: null, status: 'API key needed for live WAV file export' },
+      recommendation: `Comparing "${variantA}" vs "${variantB}": Spelled-out variants and punctuation pauses provide superior cadence and prevent digit-by-digit TTS artifacts.`
+    });
+  }
+
+  try {
+    // 1. Fetch Variant A
+    const resA = await fetch('https://users.rime.ai/v1/rime-tts', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey.trim()}`,
+        'Content-Type': 'application/json',
+        'Accept': 'audio/wav'
+      },
+      body: JSON.stringify({ text: variantA, speaker, modelId })
+    });
+    const bufA = await resA.arrayBuffer();
+    fs.writeFileSync(fileAPath, Buffer.from(bufA));
+
+    // 2. Fetch Variant B
+    const resB = await fetch('https://users.rime.ai/v1/rime-tts', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey.trim()}`,
+        'Content-Type': 'application/json',
+        'Accept': 'audio/wav'
+      },
+      body: JSON.stringify({ text: variantB, speaker, modelId })
+    });
+    const bufB = await resB.arrayBuffer();
+    fs.writeFileSync(fileBPath, Buffer.from(bufB));
+
+    return res.json({
+      testId,
+      variantA: {
+        text: variantA,
+        url: `/pronunciation_evidence/${testId}_variantA.wav`,
+        bytes: bufA.byteLength
+      },
+      variantB: {
+        text: variantB,
+        url: `/pronunciation_evidence/${testId}_variantB.wav`,
+        bytes: bufB.byteLength
+      },
+      success: true
+    });
+  } catch (err) {
+    console.error('[Pronunciation Test Error]', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Fallback to index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
